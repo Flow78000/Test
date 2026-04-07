@@ -49,9 +49,15 @@ export default function SignalsPage() {
                   <span className="text-xs text-[#6B6B75] ml-auto">{Object.keys(classData.assets || {}).length} actifs</span>
                 </div>
                 <div className="divide-y divide-[#1A1A1E]">
-                  {Object.entries(classData.assets || {}).map(([sym, asset]: [string, any]) => (
+                  {Object.entries(classData.assets || {}).map(([sym, asset]: [string, any]) => {
+                    const shortName = (asset.name || sym).replace("TICK Composite NYSE+NASDAQ", "TICK").replace("SPDR S&P 500 Bear 3x", "SPXS");
+                    const shortSym = sym.replace(".CME","").replace(".CBOT","").replace("-NQTV","").replace("_NASDAQ_NYSEMKT","");
+                    return (
                     <div key={sym} className="px-5 py-3 flex items-center gap-4 hover:bg-[#FF6B0006] transition-colors">
-                      <span className="font-mono font-bold text-[#FF6B00] w-24">{sym.replace(".CME","").replace(".CBOT","")}</span>
+                      <div className="w-28 flex-shrink-0">
+                        <div className="font-mono font-bold text-[#FF6B00] text-sm">{shortSym}</div>
+                        <div className="text-[9px] text-[#6B6B75] truncate">{shortName}</div>
+                      </div>
                       <span className="font-mono text-sm">{asset.price?.toFixed(1) || "--"}</span>
                       <div className="flex gap-1 flex-1">
                         {asset.zones?.["100%"] && (
@@ -63,7 +69,8 @@ export default function SignalsPage() {
                       </div>
                       {asset.vol_signal && <Badge color="#FF6B00">sigma ACTIF</Badge>}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             ))}
@@ -78,7 +85,11 @@ export default function SignalsPage() {
             <div className="max-h-80 overflow-y-auto divide-y divide-[#1A1A1E]">
               {(data.recent_signals || []).slice(0, 30).map((s: any, i: number) => (
                 <div key={i} className="px-5 py-2 flex items-center gap-4 text-xs hover:bg-[#FF6B0006]">
-                  <span className="font-mono text-[#6B6B75] w-20">{s.time?.split(".")[0] || "--"}</span>
+                  <span className="font-mono text-[#6B6B75] w-28">
+                    <span className="text-[#FF6B00]">{s.date || "--"}</span>
+                    {" "}
+                    <span>{s.time ? s.time.split(".")[0] : "--"}</span>
+                  </span>
                   <span className="font-mono font-bold text-[#FF6B00] w-16">{(s.symbol || "").replace(".CME","")}</span>
                   <Badge color={s.direction === "LONG" ? "#22C55E" : "#EF4444"}>{s.direction}</Badge>
                   <span className="flex-1 text-[#6B6B75]">{s.description}</span>
