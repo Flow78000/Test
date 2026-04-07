@@ -8,8 +8,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "FLO.W — Options Flow Intelligence",
-  description: "Vol Desk institutionnel — Dark Pool, GEX, Flow, Signaux Sierra Chart",
+  title: "FLO.W — Flow Liquidity & Options Warehouse",
+  description: "Quant Vol Desk — Dark Pool, GEX, Regime Switching, Sierra Chart Signals",
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
               <h1 className="text-xl font-extrabold tracking-tight">
                 FLO<span className="text-[#FF6B00] text-2xl font-black">.</span><span className="text-[#FF6B00]">W</span>
               </h1>
-              <p className="text-[10px] text-[#6B6B75] mt-1 uppercase tracking-widest">Options Flow Intelligence</p>
+              <p className="text-[9px] text-[#6B6B75] mt-1 uppercase tracking-[2px]">Flow Liquidity & Options Warehouse</p>
             </div>
             {/* Navigation */}
             <div className="flex-1 py-4 overflow-y-auto">
