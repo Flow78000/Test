@@ -42,6 +42,7 @@ export default function RootLayout({
               <NavTab href="/vol-desk" label="Vol Desk" />
               <NavTab href="/term-structure" label="Term Struct." />
               <NavTab href="/vol-cone" label="Vol Cone" />
+              <NavTab href="/range-dashboard" label="Ranges" />
               <span className="w-px h-5 bg-[#1E1E22] mx-1" />
               <NavTab href="/heatmap" label="Heatmap" />
               <NavTab href="/news" label="News" badge="LIVE" />

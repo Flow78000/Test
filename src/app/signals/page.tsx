@@ -83,14 +83,25 @@ export default function SignalsPage() {
               <span className="text-xs text-[#6B6B75] ml-auto">{(data.recent_signals || []).length} signaux</span>
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-[#1A1A1E]">
-              {(data.recent_signals || []).slice(0, 30).map((s: any, i: number) => (
-                <div key={i} className="px-5 py-2 flex items-center gap-4 text-xs hover:bg-[#FF6B0006]">
-                  <span className="font-mono text-[#6B6B75] w-28">
-                    <span className="text-[#FF6B00]">{s.date || "--"}</span>
-                    {" "}
-                    <span>{s.time ? s.time.split(".")[0] : "--"}</span>
+              {(data.recent_signals || []).slice(0, 30).map((s: any, i: number) => {
+                // Calculate signal age
+                const signalTime = s.date && s.time ? new Date(`${s.date.replace(/-/g,'/')} ${s.time.split('.')[0]}`) : null;
+                const now = new Date();
+                const ageMin = signalTime ? Math.round((now.getTime() - signalTime.getTime()) / 60000) : null;
+                const isRecent = ageMin !== null && ageMin < 30;
+                const isActive = ageMin !== null && ageMin < 10;
+                const ageLabel = ageMin !== null ? (ageMin < 1 ? 'MAINTENANT' : ageMin < 60 ? `il y a ${ageMin}min` : ageMin < 1440 ? `il y a ${Math.round(ageMin/60)}h` : `il y a ${Math.round(ageMin/1440)}j`) : '';
+
+                // Hide TICK (secret breadth indicator) — show as "BRI" (Breadth Indicator)
+                const displaySym = (s.symbol || "").replace(".CME","").replace(".CBOT","").replace("TICK-NYSE_NASDAQ_NYSEMKT","BRI").replace("-NQTV","");
+
+                return (
+                <div key={i} className={`px-5 py-2 flex items-center gap-4 text-xs hover:bg-[#FF6B0006] ${isActive ? 'animate-pulse bg-[#FF6B0008] border-l-2 border-[#FF6B00]' : isRecent ? 'bg-[#FF6B0004]' : ''}`}>
+                  <span className="font-mono w-28 flex flex-col">
+                    <span className="text-[#FF6B00] text-[10px]">{s.date || "--"} {s.time ? s.time.split(".")[0] : ""}</span>
+                    {ageLabel && <span className={`text-[9px] ${isActive ? 'text-[#FF6B00] font-bold' : isRecent ? 'text-[#FFA726]' : 'text-[#6B6B75]'}`}>{ageLabel}</span>}
                   </span>
-                  <span className="font-mono font-bold text-[#FF6B00] w-16">{(s.symbol || "").replace(".CME","")}</span>
+                  <span className="font-mono font-bold text-[#FF6B00] w-16">{displaySym}</span>
                   <Badge color={s.direction === "LONG" ? "#22C55E" : "#EF4444"}>{s.direction}</Badge>
                   <span className="flex-1 text-[#6B6B75]">{s.description}</span>
                   <span className="text-[#FF6B00] font-mono">{s.level}</span>
@@ -101,7 +112,8 @@ export default function SignalsPage() {
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
 
