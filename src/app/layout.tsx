@@ -57,6 +57,14 @@ export default function RootLayout({
                 <NavItem href="/earnings" label="Earnings" />
                 <NavItem href="/calendrier" label="Calendrier Eco" />
               </NavGroup>
+              <NavGroup label="ACADEMIE">
+                <NavItem href="/academie" label="Modules" />
+                <NavItem href="/academie/volatilite" label="01 — Volatilite" />
+                <NavItem href="/academie/rv-spreads" label="02 — RV Spreads" />
+                <NavItem href="/academie/dv01" label="03 — DV01 & Taux" />
+                <NavItem href="/academie/commodities" label="04 — Commodities" />
+                <NavItem href="/academie/gold" label="05 — Gold" />
+              </NavGroup>
               <NavGroup label="OUTILS">
                 <NavItem href="/spread-calc" label="Calculateur Spread" />
                 <NavItem href="/pnl-sim" label="Simulateur P&L" />
