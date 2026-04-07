@@ -50,6 +50,29 @@ interface StrikeRow {
 
 const API = "http://localhost:3850";
 
+function MarketStatus() {
+  const now = new Date();
+  const etHour = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" })).getHours();
+  const etDay = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" })).getDay();
+  const isWeekend = etDay === 0 || etDay === 6;
+  const isOpen = !isWeekend && etHour >= 9 && etHour < 16;
+  const isPremarket = !isWeekend && etHour >= 4 && etHour < 9;
+  const isAfterHours = !isWeekend && etHour >= 16 && etHour < 20;
+
+  const status = isOpen ? "MARCHE OUVERT" : isPremarket ? "PRE-MARKET" : isAfterHours ? "AFTER-HOURS" : isWeekend ? "WEEK-END — MARCHE FERME" : "MARCHE FERME";
+  const color = isOpen ? "#22C55E" : isPremarket || isAfterHours ? "#FFA726" : "#EF4444";
+
+  return (
+    <span className="flex items-center gap-2 px-3 py-1 rounded-md text-[11px] font-semibold" style={{ background: `${color}15`, color, border: `1px solid ${color}33` }}>
+      <span className={`w-2 h-2 rounded-full ${isOpen ? 'animate-pulse' : ''}`} style={{ background: color }} />
+      {status}
+      <span className="text-[9px] font-normal opacity-70">
+        ({now.toLocaleTimeString("fr-FR", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit" })} ET)
+      </span>
+    </span>
+  );
+}
+
 function parseOptionSymbol(sym: string): { strike: number; type: "call" | "put" } | null {
   // UW format: "SPX250409C05200000" => type C/P, strike = 05200.000
   if (!sym || sym.length < 15) return null;
@@ -171,24 +194,37 @@ export default function ChainPage() {
       setContracts(raw);
       setGreeks(Array.isArray(greekJson?.data || greekJson) ? (greekJson?.data || greekJson) : []);
 
-      // Extract spot exposure levels
+      // Extract spot exposure levels — correct field names from UW API
       const spotData = spotJson?.data || spotJson;
       if (Array.isArray(spotData) && spotData.length) {
-        let maxGex = { strike: 0, gex: -Infinity };
-        let minGex = { strike: 0, gex: Infinity };
-        let flipStrike = 0;
+        let maxCallGex = { strike: 0, gex: -Infinity };
+        let maxPutGex = { strike: 0, gex: Infinity };
         let totalNet = 0;
-        for (const row of spotData) {
-          const net = (row.call_gex ?? 0) - Math.abs(row.put_gex ?? 0);
+        let prevNet = 0;
+        let flipStrike = 0;
+
+        const sorted = [...spotData].sort((a: any, b: any) => parseFloat(a.strike) - parseFloat(b.strike));
+
+        for (const row of sorted) {
+          const strike = parseFloat(row.strike || 0);
+          const callG = parseFloat(row.call_gamma_oi || 0);
+          const putG = parseFloat(row.put_gamma_oi || 0);
+          const net = callG + putG;
           totalNet += net;
-          if (net > maxGex.gex) maxGex = { strike: row.strike ?? row.spot_price ?? 0, gex: net };
-          if (net < minGex.gex) minGex = { strike: row.strike ?? row.spot_price ?? 0, gex: net };
-          if (row.gamma_flip) flipStrike = row.strike ?? row.spot_price ?? 0;
+
+          // Call Wall = strike with highest call gamma (most call OI)
+          if (callG > maxCallGex.gex) maxCallGex = { strike, gex: callG };
+          // Put Wall = strike with most negative put gamma (most put OI)
+          if (putG < maxPutGex.gex) maxPutGex = { strike, gex: putG };
+          // Gamma Flip = where net gamma changes sign
+          if (prevNet * net < 0 && !flipStrike) flipStrike = strike;
+          prevNet = net;
         }
+
         setSpot({
-          call_wall: maxGex.strike,
-          put_wall: minGex.strike,
-          gamma_flip: flipStrike || (maxGex.strike + minGex.strike) / 2,
+          call_wall: maxCallGex.strike,
+          put_wall: maxPutGex.strike,
+          gamma_flip: flipStrike || 0,
           net_gex: totalNet,
         });
       } else {
@@ -308,6 +344,7 @@ export default function ChainPage() {
           Rafraichir
         </button>
         <LiveBadge />
+        <MarketStatus />
       </PageHeader>
 
       {/* Loading / Error */}
