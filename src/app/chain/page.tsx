@@ -48,7 +48,7 @@ interface StrikeRow {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const API = "http://localhost:3849";
+const API = "http://localhost:3850";
 
 function parseOptionSymbol(sym: string): { strike: number; type: "call" | "put" } | null {
   // UW format: "SPX250409C05200000" => type C/P, strike = 05200.000

@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
 
-const API = "http://localhost:3849";
+const API = "http://localhost:3850";
 const WINDOWS = [5, 10, 21, 63, 126, 252];
 const WINDOW_LABELS: Record<number, string> = { 5: "5j", 10: "10j", 21: "21j", 63: "63j", 126: "126j", 252: "252j" };
 

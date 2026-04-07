@@ -12,8 +12,8 @@ export default function SignalsPage() {
     setLoading(true);
     try {
       const [dash, perf] = await Promise.all([
-        fetch("http://localhost:3849/api/sierra/dashboard").then(r => r.json()),
-        fetch("http://localhost:3849/api/sierra/performance-all").then(r => r.json()),
+        fetch("http://localhost:3850/api/sierra/dashboard").then(r => r.json()),
+        fetch("http://localhost:3850/api/sierra/performance-all").then(r => r.json()),
       ]);
       setData(dash);
       setPerfData(perf);

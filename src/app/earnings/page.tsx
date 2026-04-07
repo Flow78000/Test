@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge, KpiCard } from "@/components/ui/card";
 
-const API = "http://localhost:3849";
+const API = "http://localhost:3850";
 const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven"];
 
 function fmtCap(n: number): string {

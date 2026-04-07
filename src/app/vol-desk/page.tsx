@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
 
-const API = "http://localhost:3849";
+const API = "http://localhost:3850";
 
 function vixColor(v: number): string {
   if (v < 15) return "#4CAF50";

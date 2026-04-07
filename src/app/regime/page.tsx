@@ -24,7 +24,7 @@ export default function RegimePage() {
   async function loadRegime() {
     setLoading(true);
     try {
-      const resp = await fetch("http://localhost:3849/api/regime/full");
+      const resp = await fetch("http://localhost:3850/api/regime/full");
       const json = await resp.json();
       setData(json);
     } catch (e) { console.error(e); }

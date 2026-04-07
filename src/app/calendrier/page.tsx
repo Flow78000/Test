@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
 
-const API = "http://localhost:3849";
+const API = "http://localhost:3850";
 const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
 
 const CRITIQUE_EVENTS = ["CPI", "NFP", "FOMC", "Nonfarm", "Consumer Price", "Federal Reserve", "Fed Rate", "PCE"];

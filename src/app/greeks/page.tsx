@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
 
-const API = "http://localhost:3849";
+const API = "http://localhost:3850";
 const TICKERS = ["SPX", "SPY", "QQQ"];
 
 function darkTooltip({ active, payload, label }: any) {
