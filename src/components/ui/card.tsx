@@ -5,10 +5,12 @@ export function Card({
   children,
   className,
   hover = false,
+  style,
 }: {
   children: ReactNode;
   className?: string;
   hover?: boolean;
+  style?: React.CSSProperties;
 }) {
   return (
     <div
@@ -17,6 +19,7 @@ export function Card({
         hover && "hover:border-[#FF6B00] hover:bg-[#16161A] transition-all cursor-pointer",
         className
       )}
+      style={style}
     >
       {children}
     </div>
