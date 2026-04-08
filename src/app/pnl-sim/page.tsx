@@ -28,25 +28,23 @@ export default function OptionLabPage() {
   const [activeStrategy, setActiveStrategy] = useState<StrategyTemplate | null>(null);
   const [underlying, setUnderlying] = useState("SPX");
 
-  // Fetch live spot price
+  // Fetch live spot price — UW first (always available), TWS as bonus
   const fetchSpot = useCallback(async (sym: string) => {
     try {
-      const res = await fetch(`${API}/api/market/vol-regime`).then(r => r.json());
-      const ticker = sym === "SPX" ? "SPX" : sym;
-      if (res?.[ticker]?.price) {
-        setSpot(res[ticker].price);
-        return;
-      }
-      // Try UW iv-rank for close price
-      const ivRes = await fetch(`${API}/api/uw/iv-rank?ticker=${sym}`).then(r => r.json());
+      const queryTicker = sym === "SPX" ? "SPY" : sym;
+      const ivRes = await fetch(`${API}/api/uw/iv-rank?ticker=${queryTicker}`).then(r => r.json());
       const arr = Array.isArray(ivRes?.data) ? ivRes.data : Array.isArray(ivRes) ? ivRes : [];
       const last = arr[arr.length - 1];
-      if (last?.close) setSpot(parseFloat(last.close));
-    } catch {
-      // Use default
-      const u = UNDERLYINGS.find(u => u.sym === sym);
-      if (u) setSpot(u.defaultSpot);
-    }
+      if (last?.close) {
+        const price = parseFloat(last.close);
+        // SPX ~= SPY * 10
+        setSpot(sym === "SPX" ? Math.round(price * 10) : price);
+        return;
+      }
+    } catch { }
+    // Fallback to default
+    const u = UNDERLYINGS.find(u => u.sym === sym);
+    if (u) setSpot(u.defaultSpot);
   }, []);
 
   useEffect(() => { fetchSpot(underlying); }, [underlying, fetchSpot]);

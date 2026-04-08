@@ -118,7 +118,7 @@ export default function StraddlePage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/uw/option-contracts?symbol=SPX`);
+      const res = await fetch(`${API_BASE}/api/uw/option-contracts?ticker=SPX`);
       if (!res.ok) throw new Error("API indisponible");
       const json = await res.json();
 

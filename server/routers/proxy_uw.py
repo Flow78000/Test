@@ -17,7 +17,13 @@ def uw_fetch(endpoint: str):
              "-H", "Accept: application/json"],
             capture_output=True, text=True, timeout=15
         )
-        return json.loads(result.stdout) if result.stdout else None
+        if result.stdout and result.stdout.strip():
+            return json.loads(result.stdout)
+        return {"error": "Empty response from UW API", "endpoint": endpoint}
+    except json.JSONDecodeError as e:
+        return {"error": f"Invalid JSON from UW: {str(e)}", "endpoint": endpoint}
+    except subprocess.TimeoutExpired:
+        return {"error": "UW API timeout (15s)", "endpoint": endpoint}
     except Exception as e:
         return {"error": str(e)}
 
