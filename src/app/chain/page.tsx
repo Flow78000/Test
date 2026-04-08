@@ -216,8 +216,8 @@ export default function ChainPage() {
 
         for (const row of sorted) {
           const strike = parseFloat(row.strike || 0);
-          const callG = parseFloat(row.call_gamma_oi || 0);
-          const putG = parseFloat(row.put_gamma_oi || 0);
+          const callG = parseFloat(row.call_gex || 0);
+          const putG = parseFloat(row.put_gex || 0);
           const net = callG + putG;
           totalNet += net;
 

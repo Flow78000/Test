@@ -59,24 +59,24 @@ export default function GreeksPage() {
 
   const vannaNet = greekData.map((d: any) => ({
     strike: d.strike,
-    vanna_net: (d.call_vanna_oi ?? 0) + (d.put_vanna_oi ?? 0),
+    vanna_net: (d.call_vanna ?? 0) + (d.put_vanna ?? 0),
   }));
 
   const charmNet = greekData.map((d: any) => ({
     strike: d.strike,
-    charm_net: (d.call_charm_oi ?? 0) + (d.put_charm_oi ?? 0),
+    charm_net: (d.call_charm ?? 0) + (d.put_charm ?? 0),
   }));
 
   const vannaSplit = greekData.map((d: any) => ({
     strike: d.strike,
-    call_vanna: d.call_vanna_oi ?? 0,
-    put_vanna: d.put_vanna_oi ?? 0,
+    call_vanna: d.call_vanna ?? 0,
+    put_vanna: d.put_vanna ?? 0,
   }));
 
   const charmSplit = greekData.map((d: any) => ({
     strike: d.strike,
-    call_charm: d.call_charm_oi ?? 0,
-    put_charm: d.put_charm_oi ?? 0,
+    call_charm: d.call_charm ?? 0,
+    put_charm: d.put_charm ?? 0,
   }));
 
   if (loading) return (
@@ -103,8 +103,8 @@ export default function GreeksPage() {
             <XAxis dataKey="strike" tick={{ fill: "#6B6B75", fontSize: 10 }} />
             <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
             <Tooltip content={darkTooltip} />
-            <Bar dataKey="call_gamma_oi" fill="#FF6B00" name="Call GEX" />
-            <Bar dataKey="put_gamma_oi" fill="#E040FB" name="Put GEX" />
+            <Bar dataKey="call_gex" fill="#FF6B00" name="Call GEX" />
+            <Bar dataKey="put_gex" fill="#E040FB" name="Put GEX" />
           </BarChart>
         </ResponsiveContainer>
       ),
