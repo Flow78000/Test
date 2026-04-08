@@ -53,6 +53,56 @@ const modules = [
     color: "#FFD54F",
     status: "coming",
   },
+  {
+    id: "taux",
+    num: "06",
+    title: "Taux d'Interet",
+    subtitle: "Obligations . Duration . Courbe . Futures . Yield Curve Trading",
+    level: "Institutionnel",
+    pages: 14,
+    color: "#FF6B00",
+    status: "available",
+  },
+  {
+    id: "term-structure-iv",
+    num: "07",
+    title: "Term Structure IV",
+    subtitle: "VIX Term Structure . Regimes . 0DTE . Dealer Mechanics",
+    level: "Institutionnel",
+    pages: 10,
+    color: "#42A5F5",
+    status: "available",
+  },
+  {
+    id: "term-structure-futures",
+    num: "08",
+    title: "Term Structure Futures",
+    subtitle: "Contango . Backwardation . Roll Yield . Commodities . VIX Futures",
+    level: "Institutionnel",
+    pages: 10,
+    color: "#B388FF",
+    status: "available",
+  },
+  {
+    id: "regimes",
+    num: "09",
+    title: "Regimes de Volatilite",
+    subtitle: "Compression . Expansion . Detection . Strategies . Sizing",
+    level: "Institutionnel",
+    pages: 10,
+    color: "#FFA726",
+    status: "available",
+  },
+  {
+    id: "spread-trading",
+    num: "10",
+    title: "Spread Trading Institutionnel",
+    subtitle: "Z-Score . Cointegration . Butterfly . Commodities . Cross-Asset",
+    level: "Institutionnel",
+    pages: 13,
+    color: "#EF5350",
+    status: "available",
+  },
 ];
 
 export default function AcademiePage() {
@@ -71,17 +121,17 @@ export default function AcademiePage() {
             Formation Institutionnelle
           </div>
           <h2 className="text-2xl font-extrabold mb-2">
-            5 Modules . 62 Pages . 1 Objectif
+            10 Modules . 119 Pages . 1 Objectif
           </h2>
           <p className="text-sm text-[#6B6B75] max-w-2xl leading-relaxed">
             Maitrisez les concepts utilises par les desks institutionnels : volatilite implicite,
-            term structure, spreads relatifs, duration, commodities et metaux precieux.
-            Chaque module est construit pour etre actionnable en trading reel.
+            term structure, spreads relatifs, duration, commodities, metaux precieux, taux d&apos;interet,
+            regimes de volatilite et spread trading. Chaque module est construit pour etre actionnable en trading reel.
           </p>
           <div className="flex items-center gap-4 mt-5">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
-              <span className="text-xs text-[#6B6B75]">1 module disponible</span>
+              <span className="text-xs text-[#6B6B75]">6 modules disponibles</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#FF6B00]" />

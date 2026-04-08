@@ -50,6 +50,11 @@ export default function RootLayout({
               <NavTab href="/calendrier" label="Calendrier" />
               <span className="w-px h-5 bg-[#1E1E22] mx-1" />
               <NavTab href="/academie" label="Academie" />
+              <NavTab href="/academie/taux" label="06 — Taux" />
+              <NavTab href="/academie/term-structure-iv" label="07 — TS Vol" />
+              <NavTab href="/academie/term-structure-futures" label="08 — TS Futures" />
+              <NavTab href="/academie/regimes" label="09 — Regimes" />
+              <NavTab href="/academie/spread-trading" label="10 — Spreads" />
               <NavTab href="/vol-map" label="Vol Map" />
               <NavTab href="/spread-calc" label="Calc" />
               {/* Status */}
