@@ -266,6 +266,7 @@ export default function DarkPoolPage() {
           <Card className="overflow-hidden mb-4">
             <div className="px-4 py-3 border-b border-[#1E1E22] flex items-center gap-3">
               <span className="text-sm font-bold">Gros Prints Dark Pool</span>
+              <Badge color="#FF6B00">{ticker}</Badge>
               <span className="text-xs text-[#6B6B75]">&gt; $500K — {printAnalysis?.bigPrints.length || 0} prints</span>
             </div>
             <div className="overflow-x-auto max-h-80 overflow-y-auto">
@@ -274,6 +275,7 @@ export default function DarkPoolPage() {
                   <tr className="text-[#6B6B75] uppercase text-[9px] tracking-wider border-b border-[#1E1E22]">
                     <th className="p-2 text-left">Heure</th>
                     <th className="p-2 text-left">Age</th>
+                    <th className="p-2 text-center">Actif</th>
                     <th className="p-2 text-right">Prix</th>
                     <th className="p-2 text-right">Taille</th>
                     <th className="p-2 text-right">Premium</th>
@@ -293,6 +295,7 @@ export default function DarkPoolPage() {
                         <td className="p-2 text-[10px]" style={{ color: p.direction === "BULL" ? "#22C55E" : p.direction === "BEAR" ? "#EF4444" : "#6B6B75" }}>
                           {ts ? timeAgo(ts) : "--"}
                         </td>
+                        <td className="p-2 text-center font-mono font-bold text-[#FF6B00]">{ticker}</td>
                         <td className="p-2 text-right font-mono">${parseFloat(p.price || 0).toFixed(2)}</td>
                         <td className="p-2 text-right font-mono font-bold text-[#F0F0F0]">{parseInt(p.size || 0).toLocaleString()}</td>
                         <td className="p-2 text-right font-mono font-bold" style={{ color: isMega ? "#B388FF" : "#FF6B00" }}>
@@ -310,7 +313,7 @@ export default function DarkPoolPage() {
                     );
                   })}
                   {(!printAnalysis?.bigPrints.length) && (
-                    <tr><td colSpan={8} className="p-8 text-center text-[#6B6B75]">Aucun gros print detecte — lancez le backend</td></tr>
+                    <tr><td colSpan={9} className="p-8 text-center text-[#6B6B75]">Aucun gros print detecte — lancez le backend</td></tr>
                   )}
                 </tbody>
               </table>
