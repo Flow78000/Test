@@ -59,3 +59,13 @@ def performance_all():
     for sym in files:
         all_perf[sym] = sierra_performance(sym)
     return {"assets": all_perf, "asset_count": len(all_perf)}
+
+@router.get("/signal-history")
+def signal_history():
+    """Return pre-computed 5-day signal history from all Sierra CSVs"""
+    import json
+    history_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sierra_signal_history.json")
+    if os.path.exists(history_file):
+        with open(history_file, "r") as f:
+            return json.load(f)
+    return {"error": "Historique non genere. Lancer le script d'extraction."}

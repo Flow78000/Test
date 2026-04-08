@@ -1,0 +1,2157 @@
+{
+  "generated_at": "2026-04-08T11:10:18.441113Z",
+  "assets": {
+    "Bund": {
+      "name": "Bund",
+      "total_bars": 4235,
+      "columns": 186,
+      "days": 24,
+      "daily": [
+        {
+          "date": "2026-3-9",
+          "bars": 168,
+          "high": 127.47,
+          "low": 126.28,
+          "close": 127.37,
+          "range_pct": 0.93,
+          "mr_signals": 37,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 126.75,
+              "level_val": 126.77
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 126.76,
+              "level_val": 126.77
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 126.75,
+              "level_val": 126.77
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 126.69,
+              "level_val": 126.77
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 126.68,
+              "level_val": 126.77
+            }
+          ],
+          "sigma_spikes": 9
+        },
+        {
+          "date": "2026-4-1",
+          "bars": 168,
+          "high": 126.26,
+          "low": 125.52,
+          "close": 125.69,
+          "range_pct": 0.59,
+          "mr_signals": 20,
+          "mr_details": [
+            {
+              "type": "LONG",
+              "level": "-100%",
+              "price": 125.65,
+              "level_val": 125.64
+            },
+            {
+              "type": "LONG",
+              "level": "-100%",
+              "price": 125.65,
+              "level_val": 125.64
+            },
+            {
+              "type": "LONG",
+              "level": "-100%",
+              "price": 125.68,
+              "level_val": 125.64
+            },
+            {
+              "type": "LONG",
+              "level": "-100%",
+              "price": 125.66,
+              "level_val": 125.64
+            },
+            {
+              "type": "LONG",
+              "level": "-100%",
+              "price": 125.7,
+              "level_val": 125.64
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-2",
+          "bars": 168,
+          "high": 125.76,
+          "low": 125.04,
+          "close": 125.6,
+          "range_pct": 0.57,
+          "mr_signals": 17,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 125.65,
+              "level_val": 125.66
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 125.65,
+              "level_val": 125.66
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 125.61,
+              "level_val": 125.66
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 125.64,
+              "level_val": 125.66
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 125.64,
+              "level_val": 125.66
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 168,
+          "high": 125.63,
+          "low": 124.64,
+          "close": 125.07,
+          "range_pct": 0.79,
+          "mr_signals": 20,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 125.1,
+              "level_val": 125.26
+            },
+            {
+              "type": "LONG",
+              "level": "-100%",
+              "price": 125.1,
+              "level_val": 125.02
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 125.1,
+              "level_val": 125.17
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 125.08,
+              "level_val": 125.1
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 125.07,
+              "level_val": 125.1
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 371,
+          "high": 126.64,
+          "low": 126.15,
+          "close": 126.41,
+          "range_pct": 0.39,
+          "mr_signals": 49,
+          "mr_details": [
+            {
+              "type": "LONG",
+              "level": "-75%",
+              "price": 126.23,
+              "level_val": 126.16
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 126.36,
+              "level_val": 126.37
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 126.36,
+              "level_val": 126.37
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 126.36,
+              "level_val": 126.37
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 126.37,
+              "level_val": 126.38
+            }
+          ],
+          "sigma_spikes": 0
+        }
+      ]
+    },
+    "ESM6.CME": {
+      "name": "ESM6.CME",
+      "total_bars": 30688,
+      "columns": 153,
+      "days": 26,
+      "daily": [
+        {
+          "date": "2026-4-2",
+          "bars": 1380,
+          "high": 6644.5,
+          "low": 6503.75,
+          "close": 6624.0,
+          "range_pct": 2.12,
+          "mr_signals": 92,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 6610.5,
+              "level_val": 6611.76
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 6609.0,
+              "level_val": 6611.76
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 6611.5,
+              "level_val": 6611.76
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 6611.25,
+              "level_val": 6611.76
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 6609.75,
+              "level_val": 6611.76
+            }
+          ],
+          "sigma_spikes": 27
+        },
+        {
+          "date": "2026-4-3",
+          "bars": 915,
+          "high": 6639.0,
+          "low": 6598.25,
+          "close": 6603.75,
+          "range_pct": 0.62,
+          "mr_signals": 38,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 6612.5,
+              "level_val": 6612.77
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 6609.75,
+              "level_val": 6612.75
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 6622.5,
+              "level_val": 6627.08
+            },
+            {
+              "type": "SHORT",
+              "level": "U3",
+              "price": 6622.5,
+              "level_val": 6638.52
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 6610.0,
+              "level_val": 6613.27
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 1380,
+          "high": 6661.0,
+          "low": 6567.0,
+          "close": 6650.75,
+          "range_pct": 1.41,
+          "mr_signals": 65,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6646.0,
+              "level_val": 6647.55
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6647.5,
+              "level_val": 6647.55
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6647.25,
+              "level_val": 6647.55
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6646.75,
+              "level_val": 6647.55
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6647.5,
+              "level_val": 6647.55
+            }
+          ],
+          "sigma_spikes": 5
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 1380,
+          "high": 6673.5,
+          "low": 6572.75,
+          "close": 6663.5,
+          "range_pct": 1.51,
+          "mr_signals": 45,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 6611.5,
+              "level_val": 6614.86
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 6613.25,
+              "level_val": 6614.86
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6645.5,
+              "level_val": 6651.95
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6649.5,
+              "level_val": 6651.95
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 6651.25,
+              "level_val": 6651.95
+            }
+          ],
+          "sigma_spikes": 9
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 793,
+          "high": 6840.75,
+          "low": 6652.25,
+          "close": 6833.25,
+          "range_pct": 2.76,
+          "mr_signals": 29,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 6754.5,
+              "level_val": 6756.1
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 6789.25,
+              "level_val": 6790.05
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 6795.0,
+              "level_val": 6797.57
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 6800.25,
+              "level_val": 6801.03
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 6809.75,
+              "level_val": 6811.72
+            }
+          ],
+          "sigma_spikes": 2
+        }
+      ]
+    },
+    "EUSTX50": {
+      "name": "EUSTX50",
+      "total_bars": 4234,
+      "columns": 186,
+      "days": 24,
+      "daily": [
+        {
+          "date": "2026-3-9",
+          "bars": 168,
+          "high": 5821.8,
+          "low": 5531.8,
+          "close": 5786.8,
+          "range_pct": 5.01,
+          "mr_signals": 26,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5611.8,
+              "level_val": 5616.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5609.8,
+              "level_val": 5616.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5611.8,
+              "level_val": 5616.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5603.8,
+              "level_val": 5616.6
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 5788.8,
+              "level_val": 5813.4
+            }
+          ],
+          "sigma_spikes": 67
+        },
+        {
+          "date": "2026-4-1",
+          "bars": 168,
+          "high": 5768.7,
+          "low": 5672.7,
+          "close": 5745.7,
+          "range_pct": 1.67,
+          "mr_signals": 19,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 5749.7,
+              "level_val": 5753.7
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5720.7,
+              "level_val": 5723.4
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5717.7,
+              "level_val": 5723.4
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5721.7,
+              "level_val": 5723.4
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5722.7,
+              "level_val": 5723.4
+            }
+          ],
+          "sigma_spikes": 46
+        },
+        {
+          "date": "2026-4-2",
+          "bars": 168,
+          "high": 5729.5,
+          "low": 5600.5,
+          "close": 5714.5,
+          "range_pct": 2.26,
+          "mr_signals": 23,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5696.5,
+              "level_val": 5702.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5700.5,
+              "level_val": 5702.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5701.5,
+              "level_val": 5702.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5699.5,
+              "level_val": 5702.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5698.5,
+              "level_val": 5702.6
+            }
+          ],
+          "sigma_spikes": 38
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 168,
+          "high": 5768.2,
+          "low": 5623.2,
+          "close": 5720.2,
+          "range_pct": 2.53,
+          "mr_signals": 34,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5689.7,
+              "level_val": 5692.2
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 5697.2,
+              "level_val": 5699.2
+            },
+            {
+              "type": "LONG",
+              "level": "-75%",
+              "price": 5697.2,
+              "level_val": 5691.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5715.2,
+              "level_val": 5724.6
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5719.7,
+              "level_val": 5724.6
+            }
+          ],
+          "sigma_spikes": 48
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 371,
+          "high": 5948.6,
+          "low": 5878.6,
+          "close": 5930.6,
+          "range_pct": 1.18,
+          "mr_signals": 49,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5906.6,
+              "level_val": 5907.8
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5907.6,
+              "level_val": 5907.8
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5906.6,
+              "level_val": 5907.8
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5906.6,
+              "level_val": 5906.7
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5906.6,
+              "level_val": 5907.8
+            }
+          ],
+          "sigma_spikes": 31
+        }
+      ]
+    },
+    "GER30": {
+      "name": "GER30",
+      "total_bars": 6359,
+      "columns": 186,
+      "days": 24,
+      "daily": [
+        {
+          "date": "2026-3-9",
+          "bars": 246,
+          "high": 23946.78,
+          "low": 22704.28,
+          "close": 23798.78,
+          "range_pct": 5.22,
+          "mr_signals": 34,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 22977.27,
+              "level_val": 22981.09
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 22971.28,
+              "level_val": 22981.09
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 22969.77,
+              "level_val": 22981.09
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 22957.26,
+              "level_val": 22981.09
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 23811.77,
+              "level_val": 23873.37
+            }
+          ],
+          "sigma_spikes": 86
+        },
+        {
+          "date": "2026-4-1",
+          "bars": 234,
+          "high": 23466.0,
+          "low": 23067.5,
+          "close": 23369.99,
+          "range_pct": 1.71,
+          "mr_signals": 25,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 23423.5,
+              "level_val": 23426.27
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 23420.5,
+              "level_val": 23426.27
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 23421.0,
+              "level_val": 23426.27
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 23260.01,
+              "level_val": 23272.12
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 23266.01,
+              "level_val": 23272.1
+            }
+          ],
+          "sigma_spikes": 45
+        },
+        {
+          "date": "2026-4-2",
+          "bars": 234,
+          "high": 23416.99,
+          "low": 22730.49,
+          "close": 23270.01,
+          "range_pct": 2.95,
+          "mr_signals": 31,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 23159.99,
+              "level_val": 23183.14
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 23169.99,
+              "level_val": 23183.14
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 23159.0,
+              "level_val": 23183.14
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 23144.99,
+              "level_val": 23183.14
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 23181.01,
+              "level_val": 23183.14
+            }
+          ],
+          "sigma_spikes": 56
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 233,
+          "high": 23490.99,
+          "low": 22918.49,
+          "close": 23301.01,
+          "range_pct": 2.46,
+          "mr_signals": 37,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 23186.49,
+              "level_val": 23193.05
+            },
+            {
+              "type": "LONG",
+              "level": "-75%",
+              "price": 23149.49,
+              "level_val": 23147.88
+            },
+            {
+              "type": "LONG",
+              "level": "-75%",
+              "price": 23185.01,
+              "level_val": 23147.88
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 23185.01,
+              "level_val": 23192.89
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 23262.51,
+              "level_val": 23375.97
+            }
+          ],
+          "sigma_spikes": 63
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 767,
+          "high": 24330.59,
+          "low": 23965.57,
+          "close": 24154.07,
+          "range_pct": 1.51,
+          "mr_signals": 43,
+          "mr_details": [
+            {
+              "type": "LONG",
+              "level": "-75%",
+              "price": 24031.07,
+              "level_val": 23981.47
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24103.09,
+              "level_val": 24106.92
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24103.09,
+              "level_val": 24103.12
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24104.58,
+              "level_val": 24106.92
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24106.08,
+              "level_val": 24106.93
+            }
+          ],
+          "sigma_spikes": 49
+        }
+      ]
+    },
+    "NQM6.CME": {
+      "name": "NQM6.CME",
+      "total_bars": 30680,
+      "columns": 153,
+      "days": 26,
+      "daily": [
+        {
+          "date": "2026-4-2",
+          "bars": 1380,
+          "high": 24266.75,
+          "low": 23666.0,
+          "close": 24219.5,
+          "range_pct": 2.48,
+          "mr_signals": 110,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24161.5,
+              "level_val": 24163.9
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24162.5,
+              "level_val": 24163.9
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24158.25,
+              "level_val": 24163.9
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24160.0,
+              "level_val": 24163.9
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24158.5,
+              "level_val": 24163.9
+            }
+          ],
+          "sigma_spikes": 36
+        },
+        {
+          "date": "2026-4-3",
+          "bars": 909,
+          "high": 24255.0,
+          "low": 24106.0,
+          "close": 24129.75,
+          "range_pct": 0.62,
+          "mr_signals": 24,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24210.0,
+              "level_val": 24213.65
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24210.5,
+              "level_val": 24213.6
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24210.75,
+              "level_val": 24213.61
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 24212.5,
+              "level_val": 24235.65
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24166.0,
+              "level_val": 24182.25
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 1379,
+          "high": 24452.25,
+          "low": 23981.5,
+          "close": 24349.75,
+          "range_pct": 1.93,
+          "mr_signals": 58,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24349.75,
+              "level_val": 24353.66
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24352.5,
+              "level_val": 24353.66
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24352.5,
+              "level_val": 24353.66
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24347.75,
+              "level_val": 24353.66
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24353.5,
+              "level_val": 24353.66
+            }
+          ],
+          "sigma_spikes": 15
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 1380,
+          "high": 24451.5,
+          "low": 23941.5,
+          "close": 24399.25,
+          "range_pct": 2.09,
+          "mr_signals": 42,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24165.75,
+              "level_val": 24172.24
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24301.0,
+              "level_val": 24307.2
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24285.5,
+              "level_val": 24307.2
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24428.25,
+              "level_val": 24429.11
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24421.25,
+              "level_val": 24429.11
+            }
+          ],
+          "sigma_spikes": 29
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 792,
+          "high": 25245.25,
+          "low": 24355.0,
+          "close": 25200.5,
+          "range_pct": 3.53,
+          "mr_signals": 22,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 24692.5,
+              "level_val": 24693.77
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 24692.5,
+              "level_val": 24717.46
+            },
+            {
+              "type": "SHORT",
+              "level": "U3",
+              "price": 24823.5,
+              "level_val": 24838.69
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 24823.5,
+              "level_val": 24838.29
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 25045.25,
+              "level_val": 25052.02
+            }
+          ],
+          "sigma_spikes": 2
+        }
+      ]
+    },
+    "RTYM6.CME": {
+      "name": "RTYM6.CME",
+      "total_bars": 6138,
+      "columns": 153,
+      "days": 26,
+      "daily": [
+        {
+          "date": "2026-4-2",
+          "bars": 276,
+          "high": 2555.1,
+          "low": 2467.8,
+          "close": 2542.3,
+          "range_pct": 3.43,
+          "mr_signals": 32,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 2529.2,
+              "level_val": 2530.0
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 2527.0,
+              "level_val": 2530.0
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 2529.0,
+              "level_val": 2530.0
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 2529.6,
+              "level_val": 2530.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2542.3,
+              "level_val": 2542.5
+            }
+          ],
+          "sigma_spikes": 51
+        },
+        {
+          "date": "2026-4-3",
+          "bars": 182,
+          "high": 2555.0,
+          "low": 2525.1,
+          "close": 2531.7,
+          "range_pct": 1.18,
+          "mr_signals": 10,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2542.5,
+              "level_val": 2542.6
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2542.7,
+              "level_val": 2542.9
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2542.6,
+              "level_val": 2542.9
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2542.6,
+              "level_val": 2542.9
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2534.2,
+              "level_val": 2537.1
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 276,
+          "high": 2561.6,
+          "low": 2511.4,
+          "close": 2553.3,
+          "range_pct": 1.97,
+          "mr_signals": 13,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 2557.3,
+              "level_val": 2557.6
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 2555.1,
+              "level_val": 2557.6
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 2557.5,
+              "level_val": 2557.6
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 2555.3,
+              "level_val": 2557.6
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2552.6,
+              "level_val": 2553.9
+            }
+          ],
+          "sigma_spikes": 37
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 276,
+          "high": 2568.7,
+          "low": 2525.2,
+          "close": 2565.9,
+          "range_pct": 1.7,
+          "mr_signals": 16,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2539.0,
+              "level_val": 2539.3
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2536.5,
+              "level_val": 2539.3
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2539.0,
+              "level_val": 2539.2
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2538.1,
+              "level_val": 2541.8
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 2561.1,
+              "level_val": 2562.3
+            }
+          ],
+          "sigma_spikes": 56
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 160,
+          "high": 2659.6,
+          "low": 2557.4,
+          "close": 2653.5,
+          "range_pct": 3.85,
+          "mr_signals": 9,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 2614.6,
+              "level_val": 2617.0
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 2616.9,
+              "level_val": 2617.0
+            },
+            {
+              "type": "SHORT",
+              "level": "U3",
+              "price": 2640.6,
+              "level_val": 2642.5
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 2640.8,
+              "level_val": 2642.5
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 2643.7,
+              "level_val": 2644.7
+            }
+          ],
+          "sigma_spikes": 2
+        }
+      ]
+    },
+    "SPXS-NQTV": {
+      "name": "SPXS-NQTV",
+      "total_bars": 3969,
+      "columns": 32,
+      "days": 22,
+      "daily": [
+        {
+          "date": "2026-4-1",
+          "bars": 183,
+          "high": 40.07,
+          "low": 39.15,
+          "close": 39.71,
+          "range_pct": 2.32,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 99
+        },
+        {
+          "date": "2026-4-2",
+          "bars": 162,
+          "high": 41.6,
+          "low": 40.61,
+          "close": 40.62,
+          "range_pct": 2.44,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 40
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 149,
+          "high": 39.56,
+          "low": 39.0,
+          "close": 39.02,
+          "range_pct": 1.44,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 48
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 146,
+          "high": 39.84,
+          "low": 38.73,
+          "close": 39.83,
+          "range_pct": 2.79,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 56
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 89,
+          "high": 36.08,
+          "low": 35.71,
+          "close": 35.83,
+          "range_pct": 1.03,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 38
+        }
+      ]
+    },
+    "TICK-NYSE_NASDAQ_NYSEMKT": {
+      "name": "TICK-NYSE_NASDAQ_NYSEMKT",
+      "total_bars": 76633,
+      "columns": 44,
+      "days": 26,
+      "daily": [
+        {
+          "date": "2026-4-2",
+          "bars": 3488,
+          "high": 6338.0,
+          "low": -4556.0,
+          "close": 1373.0,
+          "range_pct": 793.45,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-3",
+          "bars": 1,
+          "high": 1382.0,
+          "low": 1055.0,
+          "close": 1300.0,
+          "range_pct": 25.15,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 2422,
+          "high": 4902.0,
+          "low": -5278.0,
+          "close": 101.0,
+          "range_pct": 10079.21,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 3529,
+          "high": 6030.0,
+          "low": -5697.0,
+          "close": 120.0,
+          "range_pct": 9772.5,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 69,
+          "high": 3220.0,
+          "low": -436.0,
+          "close": 2159.0,
+          "range_pct": 169.34,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 0
+        }
+      ]
+    },
+    "USEquities": {
+      "name": "USEquities",
+      "total_bars": 6105,
+      "columns": 186,
+      "days": 25,
+      "daily": [
+        {
+          "date": "2026-4-2",
+          "bars": 276,
+          "high": 5146.4,
+          "low": 5020.3,
+          "close": 5129.3,
+          "range_pct": 2.46,
+          "mr_signals": 37,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5109.1,
+              "level_val": 5113.4
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5101.7,
+              "level_val": 5113.4
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5112.0,
+              "level_val": 5113.4
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5111.6,
+              "level_val": 5113.4
+            },
+            {
+              "type": "SHORT",
+              "level": "100%",
+              "price": 5111.8,
+              "level_val": 5113.4
+            }
+          ],
+          "sigma_spikes": 38
+        },
+        {
+          "date": "2026-4-3",
+          "bars": 183,
+          "high": 5141.4,
+          "low": 5106.9,
+          "close": 5112.3,
+          "range_pct": 0.67,
+          "mr_signals": 8,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5129.3,
+              "level_val": 5131.5
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5130.3,
+              "level_val": 5131.1
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5121.6,
+              "level_val": 5121.7
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5118.4,
+              "level_val": 5121.6
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5118.1,
+              "level_val": 5121.2
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 276,
+          "high": 5165.0,
+          "low": 5081.8,
+          "close": 5156.5,
+          "range_pct": 1.61,
+          "mr_signals": 13,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5116.3,
+              "level_val": 5117.4
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5117.2,
+              "level_val": 5117.4
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 5134.0,
+              "level_val": 5162.4
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5131.0,
+              "level_val": 5137.7
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5135.8,
+              "level_val": 5137.9
+            }
+          ],
+          "sigma_spikes": 14
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 276,
+          "high": 5174.3,
+          "low": 5087.5,
+          "close": 5166.0,
+          "range_pct": 1.68,
+          "mr_signals": 38,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5120.3,
+              "level_val": 5127.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5123.4,
+              "level_val": 5127.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5127.0,
+              "level_val": 5127.1
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5125.3,
+              "level_val": 5128.2
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 5145.9,
+              "level_val": 5155.8
+            }
+          ],
+          "sigma_spikes": 48
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 158,
+          "high": 5325.7,
+          "low": 5158.2,
+          "close": 5319.7,
+          "range_pct": 3.15,
+          "mr_signals": 13,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5287.6,
+              "level_val": 5288.2
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5287.7,
+              "level_val": 5288.1
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5285.8,
+              "level_val": 5288.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 5286.6,
+              "level_val": 5287.8
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 5293.4,
+              "level_val": 5294.0
+            }
+          ],
+          "sigma_spikes": 2
+        }
+      ]
+    },
+    "VOLX": {
+      "name": "VOLX",
+      "total_bars": 6116,
+      "columns": 186,
+      "days": 26,
+      "daily": [
+        {
+          "date": "2026-4-2",
+          "bars": 276,
+          "high": 26.82,
+          "low": 24.17,
+          "close": 24.605,
+          "range_pct": 10.77,
+          "mr_signals": 13,
+          "mr_details": [
+            {
+              "type": "LONG",
+              "level": "L2",
+              "price": 24.825,
+              "level_val": 24.765
+            },
+            {
+              "type": "LONG",
+              "level": "L2",
+              "price": 24.985,
+              "level_val": 24.69
+            },
+            {
+              "type": "LONG",
+              "level": "L2",
+              "price": 24.675,
+              "level_val": 24.619
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 25.55,
+              "level_val": 25.551
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 25.425,
+              "level_val": 25.55
+            }
+          ],
+          "sigma_spikes": 175
+        },
+        {
+          "date": "2026-4-3",
+          "bars": 178,
+          "high": 24.985,
+          "low": 24.43,
+          "close": 24.985,
+          "range_pct": 2.22,
+          "mr_signals": 19,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.675,
+              "level_val": 24.681
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.64,
+              "level_val": 24.693
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.605,
+              "level_val": 24.698
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.655,
+              "level_val": 24.695
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.62,
+              "level_val": 24.696
+            }
+          ],
+          "sigma_spikes": 73
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 276,
+          "high": 25.7,
+          "low": 23.575,
+          "close": 23.79,
+          "range_pct": 8.93,
+          "mr_signals": 20,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.28,
+              "level_val": 24.49
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.465,
+              "level_val": 24.489
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.415,
+              "level_val": 24.486
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.195,
+              "level_val": 24.217
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.055,
+              "level_val": 24.216
+            }
+          ],
+          "sigma_spikes": 210
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 276,
+          "high": 26.25,
+          "low": 23.67,
+          "close": 24.575,
+          "range_pct": 10.5,
+          "mr_signals": 12,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.07,
+              "level_val": 24.156
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 23.925,
+              "level_val": 24.061
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 25.53,
+              "level_val": 25.656
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.82,
+              "level_val": 24.921
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 24.85,
+              "level_val": 24.921
+            }
+          ],
+          "sigma_spikes": 182
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 157,
+          "high": 24.825,
+          "low": 21.635,
+          "close": 21.73,
+          "range_pct": 14.68,
+          "mr_signals": 8,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 22.6,
+              "level_val": 22.617
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 22.595,
+              "level_val": 22.623
+            },
+            {
+              "type": "LONG",
+              "level": "L2",
+              "price": 22.505,
+              "level_val": 22.499
+            },
+            {
+              "type": "LONG",
+              "level": "L2",
+              "price": 22.315,
+              "level_val": 22.283
+            },
+            {
+              "type": "LONG",
+              "level": "L2",
+              "price": 22.25,
+              "level_val": 22.212
+            }
+          ],
+          "sigma_spikes": 127
+        }
+      ]
+    },
+    "VXX-NQTV": {
+      "name": "VXX-NQTV",
+      "total_bars": 4373,
+      "columns": 35,
+      "days": 22,
+      "daily": [
+        {
+          "date": "2026-4-1",
+          "bars": 152,
+          "high": 35.74,
+          "low": 34.4,
+          "close": 35.57,
+          "range_pct": 3.77,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 103
+        },
+        {
+          "date": "2026-4-2",
+          "bars": 155,
+          "high": 37.4,
+          "low": 36.04,
+          "close": 36.2,
+          "range_pct": 3.76,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 60
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 118,
+          "high": 34.86,
+          "low": 34.11,
+          "close": 34.12,
+          "range_pct": 2.2,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 55
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 149,
+          "high": 35.44,
+          "low": 33.71,
+          "close": 35.43,
+          "range_pct": 4.88,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 65
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 87,
+          "high": 32.38,
+          "low": 31.49,
+          "close": 31.62,
+          "range_pct": 2.81,
+          "mr_signals": 0,
+          "mr_details": [],
+          "sigma_spikes": 62
+        }
+      ]
+    },
+    "YMM6.CBOT": {
+      "name": "YMM6.CBOT",
+      "total_bars": 30484,
+      "columns": 154,
+      "days": 28,
+      "daily": [
+        {
+          "date": "2026-4-3",
+          "bars": 724,
+          "high": 46895.0,
+          "low": 46584.0,
+          "close": 46629.0,
+          "range_pct": 0.67,
+          "mr_signals": 12,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46666.0,
+              "level_val": 46671.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46648.0,
+              "level_val": 46672.0
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 46752.0,
+              "level_val": 46784.0
+            },
+            {
+              "type": "SHORT",
+              "level": "U3",
+              "price": 46752.0,
+              "level_val": 46857.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46662.0,
+              "level_val": 46680.0
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-5",
+          "bars": 116,
+          "high": 46569.0,
+          "low": 46362.0,
+          "close": 46471.0,
+          "range_pct": 0.45,
+          "mr_signals": 18,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46440.0,
+              "level_val": 46447.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46446.0,
+              "level_val": 46447.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46445.0,
+              "level_val": 46447.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46446.0,
+              "level_val": 46447.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46446.0,
+              "level_val": 46447.0
+            }
+          ],
+          "sigma_spikes": 7
+        },
+        {
+          "date": "2026-4-6",
+          "bars": 1368,
+          "high": 47052.0,
+          "low": 46467.0,
+          "close": 46927.0,
+          "range_pct": 1.25,
+          "mr_signals": 49,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 46743.0,
+              "level_val": 46744.0
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 47010.0,
+              "level_val": 47023.0
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 47015.0,
+              "level_val": 47023.0
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 47016.0,
+              "level_val": 47023.0
+            },
+            {
+              "type": "SHORT",
+              "level": "75%",
+              "price": 47022.0,
+              "level_val": 47023.0
+            }
+          ],
+          "sigma_spikes": 0
+        },
+        {
+          "date": "2026-4-7",
+          "bars": 1371,
+          "high": 47817.0,
+          "low": 46425.0,
+          "close": 47740.0,
+          "range_pct": 2.92,
+          "mr_signals": 87,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 47694.0,
+              "level_val": 47709.0
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 47707.0,
+              "level_val": 47725.0
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 47777.0,
+              "level_val": 47788.0
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 47785.0,
+              "level_val": 47795.0
+            },
+            {
+              "type": "SHORT",
+              "level": "U2",
+              "price": 47795.0,
+              "level_val": 47803.0
+            }
+          ],
+          "sigma_spikes": 18
+        },
+        {
+          "date": "2026-4-8",
+          "bars": 670,
+          "high": 48079.0,
+          "low": 47641.0,
+          "close": 48022.0,
+          "range_pct": 0.91,
+          "mr_signals": 7,
+          "mr_details": [
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 47689.0,
+              "level_val": 47691.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 47675.0,
+              "level_val": 47691.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 47675.0,
+              "level_val": 47688.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 47681.0,
+              "level_val": 47688.0
+            },
+            {
+              "type": "SHORT",
+              "level": "VWAP",
+              "price": 47671.0,
+              "level_val": 47687.0
+            }
+          ],
+          "sigma_spikes": 0
+        }
+      ]
+    }
+  },
+  "asset_count": 12
+}
