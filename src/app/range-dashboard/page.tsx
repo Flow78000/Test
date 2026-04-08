@@ -1,12 +1,46 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { PageHeader, Card, LiveBadge, Badge, KpiCard } from "@/components/ui/card";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { PageHeader, Card, LiveBadge } from "@/components/ui/card";
 import { DataFreshness } from "@/components/ui/data-freshness";
-import { fmtNum } from "@/lib/format";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, LineChart, Line } from "recharts";
 
 const API = "http://localhost:3850";
+
+// Bloomberg-style heatmap colors based on range %
+function heatColor(val: number): string {
+  if (val >= 300) return "#00CC00";
+  if (val >= 200) return "#33DD33";
+  if (val >= 150) return "#66EE66";
+  if (val >= 120) return "#88FF88";
+  if (val >= 100) return "#AAFFAA";
+  if (val >= 80) return "#CCFFCC";
+  if (val >= 60) return "#EEFFEE";
+  if (val >= 40) return "#FFFFCC";
+  if (val >= 20) return "#FFFF99";
+  if (val >= 0) return "#FFFF66";
+  return "#FFCCCC";
+}
+
+function heatText(val: number): string {
+  return val >= 100 ? "#003300" : val >= 40 ? "#333300" : "#330000";
+}
+
+// Range % color for the RV daily column
+function rvColor(rv: number): string {
+  if (rv >= 2) return "#FF4444";
+  if (rv >= 1) return "#FFA726";
+  if (rv >= 0.5) return "#FFD600";
+  return "#22C55E";
+}
+
+const CLASS_COLORS: Record<string, string> = {
+  "Indices US": "#FF6B00",
+  "EUREX": "#42A5F5",
+  "Volatilite": "#EF4444",
+  "Inverse": "#AB47BC",
+  "Breadth": "#FFD600",
+  "GEX": "#22C55E",
+};
 
 interface DailyRange {
   date: string;
@@ -27,29 +61,18 @@ interface AssetRange {
   latest: DailyRange | null;
 }
 
-const CLASS_COLORS: Record<string, string> = {
-  "Indices US": "#FF6B00",
-  "EUREX": "#42A5F5",
-  "Volatilite": "#EF4444",
-  "Inverse": "#AB47BC",
-  "Breadth": "#FFD600",
-  "GEX": "#22C55E",
-};
-
 export default function RangeDashboardPage() {
   const [assets, setAssets] = useState<Record<string, AssetRange>>({});
   const [loading, setLoading] = useState(true);
   const [freshness, setFreshness] = useState<any>(null);
-  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
-  const [historyDays, setHistoryDays] = useState(10);
+  const [days, setDays] = useState(20);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/sierra/daily-ranges?days=${historyDays}`).then(r => r.json());
+      const res = await fetch(`${API}/api/sierra/daily-ranges?days=${days}`).then(r => r.json());
       if (res?.assets) {
         setAssets(res.assets);
-        // Get freshness from any asset's sierra data
         const firstKey = Object.keys(res.assets)[0];
         if (firstKey) {
           const sigRes = await fetch(`${API}/api/sierra/signals?symbol=${firstKey}`).then(r => r.json()).catch(() => null);
@@ -58,7 +81,7 @@ export default function RangeDashboardPage() {
       }
     } catch { }
     setLoading(false);
-  }, [historyDays]);
+  }, [days]);
 
   useEffect(() => {
     load();
@@ -66,40 +89,57 @@ export default function RangeDashboardPage() {
     return () => clearInterval(t);
   }, [load]);
 
-  // Group assets by class
-  const groups: Record<string, { sym: string; data: AssetRange }[]> = {};
-  Object.entries(assets).forEach(([sym, data]) => {
-    const cls = data.asset_class || "Autre";
-    if (!groups[cls]) groups[cls] = [];
-    groups[cls].push({ sym, data });
-  });
+  // Collect all unique dates across all assets
+  const allDates = useMemo(() => {
+    const dateSet = new Set<string>();
+    Object.values(assets).forEach(a => a.days.forEach(d => dateSet.add(d.date)));
+    return Array.from(dateSet).sort();
+  }, [assets]);
 
-  // Stats
-  const allLatest = Object.entries(assets).map(([sym, a]) => ({ sym, ...a.latest! })).filter(a => a.close);
-  const upCount = allLatest.filter(a => (a.change_pct ?? 0) > 0).length;
-  const downCount = allLatest.filter(a => (a.change_pct ?? 0) < 0).length;
-  const rvs = allLatest.map(a => a.rv_daily).filter((v): v is number => v !== null);
-  const avgRV = rvs.length ? rvs.reduce((s, v) => s + v, 0) / rvs.length : 0;
-  const maxRange = allLatest.reduce((m, a) => Math.max(m, a.range_pct || 0), 0);
+  // Build asset rows grouped by class
+  const groups = useMemo(() => {
+    const g: Record<string, { sym: string; data: AssetRange }[]> = {};
+    Object.entries(assets).forEach(([sym, data]) => {
+      const cls = data.asset_class || "Autre";
+      if (!groups[cls]) g[cls] = [];
+      g[cls]!.push({ sym, data });
+    });
+    return g;
+  }, [assets]);
 
-  const selected = selectedAsset ? assets[selectedAsset] : null;
+  // Format date for column header: "27 Mar" style
+  function fmtDateCol(dateStr: string): string {
+    try {
+      const d = new Date(dateStr + "T00:00:00");
+      const day = d.getDate();
+      const months = ["Jan", "Fev", "Mar", "Avr", "Mai", "Jun", "Jul", "Aou", "Sep", "Oct", "Nov", "Dec"];
+      return `${day} ${months[d.getMonth()]}`;
+    } catch {
+      return dateStr.slice(5);
+    }
+  }
+
+  // Short symbol name
+  function shortSym(sym: string): string {
+    return sym.replace(".CME", "").replace(".CBOT", "").replace("-NQTV", "").replace("_NASDAQ_NYSEMKT", "").replace("SP500GEX-", "GEX:");
+  }
 
   if (loading) return (
     <div className="p-4">
-      <PageHeader title="Range Dashboard" subtitle="Ranges journaliers — donnees Sierra Chart" />
+      <PageHeader title="Range Dashboard" subtitle="Heatmap des ranges journaliers" />
       <div className="text-center py-20 text-[#6B6B75]">Chargement des ranges Sierra...</div>
     </div>
   );
 
   return (
     <div className="p-4">
-      <PageHeader title="Range Dashboard" subtitle="Ranges journaliers, RV daily et performance — Sierra Chart live">
-        <select value={historyDays} onChange={e => setHistoryDays(parseInt(e.target.value))}
+      <PageHeader title="Range Dashboard" subtitle="Heatmap Bloomberg — % range realise par jour et par actif">
+        <select value={days} onChange={e => setDays(parseInt(e.target.value))}
           className="bg-[#111114] border border-[#1E1E22] rounded-lg px-3 py-1.5 text-xs text-white">
-          <option value={5}>5 jours</option>
           <option value={10}>10 jours</option>
           <option value={20}>20 jours</option>
           <option value={30}>30 jours</option>
+          <option value={60}>60 jours</option>
         </select>
         <button onClick={load} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
           Rafraichir
@@ -107,164 +147,110 @@ export default function RangeDashboardPage() {
         <LiveBadge />
       </PageHeader>
 
-      {/* Freshness */}
       {freshness && <div className="mb-3"><DataFreshness {...freshness} /></div>}
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-        <KpiCard label="Actifs" value={Object.keys(assets).length} color="#FF6B00" />
-        <KpiCard label="Hausse" value={upCount} color="#22C55E" />
-        <KpiCard label="Baisse" value={downCount} color="#EF4444" />
-        <KpiCard label="RV Daily Moy." value={`${avgRV.toFixed(3)}%`} color="#AB47BC" sublabel="Realized Vol 1D" />
-        <KpiCard label="Max Range" value={`${maxRange.toFixed(2)}%`} color="#FFA726" sublabel="Plus large range 1D" />
-      </div>
-
-      {/* Main Table */}
-      <Card className="overflow-hidden mb-4">
+      {/* Heatmap Matrix */}
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
+          <table className="border-collapse" style={{ minWidth: allDates.length * 70 + 200 }}>
             <thead>
-              <tr className="bg-[#0A0A0E]">
-                <th className="sticky left-0 z-20 bg-[#0A0A0E] p-2.5 text-left text-[10px] text-[#6B6B75] border-b border-r border-[#1E1E22] min-w-[120px]">Actif</th>
-                <th className="p-2 text-right text-[10px] text-[#6B6B75] border-b border-[#1E1E22]">Close</th>
-                <th className="p-2 text-right text-[10px] text-[#6B6B75] border-b border-[#1E1E22]">Var%</th>
-                <th className="p-2 text-right text-[10px] text-[#AB47BC] font-bold border-b border-[#1E1E22]">% RV 1D</th>
-                <th className="p-2 text-right text-[10px] text-[#6B6B75] border-b border-[#1E1E22]">High</th>
-                <th className="p-2 text-right text-[10px] text-[#6B6B75] border-b border-[#1E1E22]">Low</th>
-                <th className="p-2 text-right text-[10px] text-[#FFA726] border-b border-[#1E1E22]">Range%</th>
-                <th className="p-2 text-right text-[10px] text-[#6B6B75] border-b border-[#1E1E22]">Range pts</th>
-                <th className="p-2 text-center text-[10px] text-[#6B6B75] border-b border-[#1E1E22] min-w-[90px]">Pos. / Range</th>
+              <tr>
+                <th className="sticky left-0 z-30 bg-[#0A0A0E] p-2 text-left text-[10px] text-[#6B6B75] font-semibold border-b border-r border-[#1E1E22] min-w-[140px]">
+                  Actif
+                </th>
+                {allDates.map(date => (
+                  <th key={date} className="p-1 text-center text-[9px] text-[#6B6B75] font-semibold border-b border-[#1E1E22] min-w-[65px]">
+                    {fmtDateCol(date)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {Object.entries(groups).map(([cls, items]) => (
                 <>
+                  {/* Class header */}
                   <tr key={`hdr-${cls}`}>
-                    <td colSpan={9} className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-[2px] border-b border-[#1E1E22]"
+                    <td colSpan={allDates.length + 1}
+                      className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[2px] border-b border-[#1E1E22]"
                       style={{ color: CLASS_COLORS[cls] || "#6B6B75", backgroundColor: `${CLASS_COLORS[cls] || "#6B6B75"}15` }}>
-                      {cls} ({items.length})
+                      {cls}
                     </td>
                   </tr>
+                  {/* Asset rows */}
                   {items.map(({ sym, data: a }) => {
-                    const d = a.latest;
-                    if (!d) return null;
-                    const posInRange = d.high !== d.low ? ((d.close - d.low) / (d.high - d.low) * 100) : 50;
+                    // Build a date -> range map for this asset
+                    const dateMap: Record<string, DailyRange> = {};
+                    a.days.forEach(d => { dateMap[d.date] = d; });
+
                     return (
-                      <tr key={sym}
-                        className={`cursor-pointer transition-colors ${selectedAsset === sym ? "bg-[#FF6B0010]" : "hover:bg-[#FFFFFF04]"}`}
-                        onClick={() => setSelectedAsset(selectedAsset === sym ? null : sym)}
-                      >
-                        <td className="sticky left-0 z-10 bg-[#111114] p-2 border-b border-r border-[#1E1E22]">
-                          <span className="font-mono font-bold text-[12px]" style={{ color: CLASS_COLORS[a.asset_class] || "#FF6B00" }}>
-                            {sym.replace(".CME", "").replace(".CBOT", "").replace("-NQTV", "").replace("_NASDAQ_NYSEMKT", "")}
-                          </span>
-                          <span className="text-[9px] text-[#6B6B75] ml-1.5 truncate">{a.name}</span>
-                        </td>
-                        <td className="p-2 text-right border-b border-[#1E1E22] font-mono text-white">{d.close.toFixed(2)}</td>
-                        <td className="p-2 text-right border-b border-[#1E1E22]">
-                          <span className="font-mono font-bold" style={{ color: (d.change_pct ?? 0) >= 0 ? "#22C55E" : "#EF4444" }}>
-                            {d.change_pct != null ? `${d.change_pct >= 0 ? "+" : ""}${d.change_pct.toFixed(2)}%` : "--"}
+                      <tr key={sym} className="hover:bg-[#FFFFFF06] transition-colors">
+                        <td className="sticky left-0 z-10 bg-[#0D0D10] p-1.5 border-b border-r border-[#1E1E22]">
+                          <span className="font-mono font-bold text-[11px]" style={{ color: CLASS_COLORS[a.asset_class] || "#FF6B00" }}>
+                            {shortSym(sym)}
                           </span>
                         </td>
-                        <td className="p-2 text-right border-b border-[#1E1E22]">
-                          <span className="font-mono font-bold text-[#AB47BC]">
-                            {d.rv_daily != null ? `${d.rv_daily.toFixed(3)}%` : "--"}
-                          </span>
-                        </td>
-                        <td className="p-2 text-right border-b border-[#1E1E22] font-mono text-[#6B6B75]">{d.high.toFixed(2)}</td>
-                        <td className="p-2 text-right border-b border-[#1E1E22] font-mono text-[#6B6B75]">{d.low.toFixed(2)}</td>
-                        <td className="p-2 text-right border-b border-[#1E1E22]">
-                          <span className="font-mono font-bold text-[#FFA726]">{d.range_pct.toFixed(2)}%</span>
-                        </td>
-                        <td className="p-2 text-right border-b border-[#1E1E22] font-mono text-[#6B6B75]">{d.range_pts.toFixed(2)}</td>
-                        <td className="p-2 border-b border-[#1E1E22]">
-                          <div className="flex items-center gap-1.5">
-                            <div className="flex-1 h-2 bg-[#1E1E22] rounded-full overflow-hidden">
-                              <div className="h-full rounded-full" style={{
-                                width: `${Math.min(100, Math.max(0, posInRange))}%`,
-                                background: posInRange > 70 ? "#22C55E" : posInRange < 30 ? "#EF4444" : "#FFA726",
-                              }} />
-                            </div>
-                            <span className="text-[9px] font-mono text-[#6B6B75] w-8 text-right">{posInRange.toFixed(0)}%</span>
-                          </div>
-                        </td>
+                        {allDates.map(date => {
+                          const d = dateMap[date];
+                          if (!d) return (
+                            <td key={date} className="p-0.5 border-b border-[#1E1E22]">
+                              <div className="text-center text-[9px] text-[#333]">—</div>
+                            </td>
+                          );
+                          // Use range_pct as the heatmap value (multiply by a factor for visual contrast)
+                          const val = d.range_pct;
+                          const scaledVal = val * 100; // Scale for color mapping (0.5% → 50, 1% → 100, 2% → 200)
+                          return (
+                            <td key={date} className="p-0.5 border-b border-[#0E0E12]">
+                              <div
+                                className="text-center font-mono text-[10px] font-semibold rounded-sm px-0.5 py-1"
+                                style={{ backgroundColor: heatColor(scaledVal), color: heatText(scaledVal) }}
+                                title={`${sym} ${date}\nRange: ${val.toFixed(2)}% (${d.range_pts.toFixed(2)} pts)\nO:${d.open.toFixed(2)} H:${d.high.toFixed(2)} L:${d.low.toFixed(2)} C:${d.close.toFixed(2)}${d.rv_daily != null ? `\nRV 1D: ${d.rv_daily.toFixed(3)}%` : ""}${d.change_pct != null ? `\nVar: ${d.change_pct >= 0 ? "+" : ""}${d.change_pct.toFixed(2)}%` : ""}`}
+                              >
+                                {val.toFixed(2)}%
+                              </div>
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })}
                 </>
               ))}
             </tbody>
+            {/* Date footer */}
+            <tfoot>
+              <tr>
+                <td className="sticky left-0 z-10 bg-[#0A0A0E] p-1.5 border-t border-r border-[#1E1E22] text-[9px] text-[#6B6B75]" />
+                {allDates.map(date => (
+                  <td key={date} className="p-1 text-center text-[8px] text-[#555] border-t border-[#1E1E22]">
+                    {date.slice(8)}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
           </table>
         </div>
       </Card>
 
-      {/* Detail panel */}
-      {selected && selectedAsset && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          {/* Range history chart */}
-          <Card className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-sm font-bold text-[#FF6B00]">{selectedAsset.replace(".CME", "").replace(".CBOT", "")}</span>
-              <span className="text-xs text-[#6B6B75]">{selected.name} — Range% {historyDays}j</span>
+      {/* Legend */}
+      <div className="flex items-center gap-3 mt-3 text-[10px] text-[#6B6B75]">
+        <span>Legende :</span>
+        <div className="flex gap-1 items-center">
+          {[
+            { val: 200, label: ">2%" },
+            { val: 150, label: "1.5%" },
+            { val: 100, label: "1%" },
+            { val: 60, label: "0.6%" },
+            { val: 30, label: "0.3%" },
+          ].map(({ val, label }) => (
+            <div key={val} className="flex items-center gap-1">
+              <div className="w-4 h-3 rounded-sm" style={{ backgroundColor: heatColor(val) }} />
+              <span>{label}</span>
             </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={selected.days}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
-                <XAxis dataKey="date" tick={{ fill: "#6B6B75", fontSize: 9 }} tickFormatter={(v: string) => v.toString().slice(5)} />
-                <YAxis tick={{ fill: "#6B6B75", fontSize: 9 }} tickFormatter={(v: number) => `${v.toFixed(1)}%`} />
-                <Tooltip contentStyle={{ background: "#111114", border: "1px solid #1E1E22", borderRadius: 8, fontSize: 11 }}
-                  formatter={(v: any) => [`${Number(v).toFixed(3)}%`]} />
-                <Bar dataKey="range_pct" fill="#FFA726" name="Range%" radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* RV Daily + Change% history */}
-          <Card className="p-4">
-            <div className="text-xs text-[#6B6B75] mb-3">RV Daily & Var% — {historyDays} jours</div>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={selected.days.filter(d => d.rv_daily !== null)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
-                <XAxis dataKey="date" tick={{ fill: "#6B6B75", fontSize: 9 }} tickFormatter={(v: string) => v.toString().slice(5)} />
-                <YAxis tick={{ fill: "#6B6B75", fontSize: 9 }} />
-                <Tooltip contentStyle={{ background: "#111114", border: "1px solid #1E1E22", borderRadius: 8, fontSize: 11 }}
-                  formatter={(v: any) => [`${Number(v).toFixed(3)}%`]} />
-                <ReferenceLine y={0} stroke="#6B6B75" strokeDasharray="3 3" />
-                <Line dataKey="rv_daily" stroke="#AB47BC" strokeWidth={2} dot={{ r: 3 }} name="% RV 1D" />
-                <Line dataKey="change_pct" stroke="#42A5F5" strokeWidth={1} dot={{ r: 2 }} name="Var%" />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Stats */}
-          <Card className="p-4 lg:col-span-2">
-            <div className="text-xs font-bold text-[#FF6B00] uppercase tracking-widest mb-3">
-              Statistiques {selectedAsset.replace(".CME", "").replace(".CBOT", "")} — {selected.days.length} jours
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {(() => {
-                const days = selected.days.filter(d => d.rv_daily != null);
-                const rvs = days.map(d => d.rv_daily!);
-                const ranges = selected.days.map(d => d.range_pct);
-                const avgRV = rvs.length ? rvs.reduce((s, v) => s + v, 0) / rvs.length : 0;
-                const maxRV = rvs.length ? Math.max(...rvs) : 0;
-                const avgRange = ranges.length ? ranges.reduce((s, v) => s + v, 0) / ranges.length : 0;
-                const maxRange = ranges.length ? Math.max(...ranges) : 0;
-                const upDays = days.filter(d => (d.change_pct ?? 0) > 0).length;
-                return (
-                  <>
-                    <KpiCard label="RV Moy." value={`${avgRV.toFixed(3)}%`} color="#AB47BC" />
-                    <KpiCard label="RV Max" value={`${maxRV.toFixed(3)}%`} color="#EF4444" />
-                    <KpiCard label="Range Moy." value={`${avgRange.toFixed(2)}%`} color="#FFA726" />
-                    <KpiCard label="Range Max" value={`${maxRange.toFixed(2)}%`} color="#FF6B00" />
-                    <KpiCard label="Jours Hausse" value={`${upDays}/${days.length}`} color="#22C55E" sublabel={`${days.length ? (upDays / days.length * 100).toFixed(0) : 0}%`} />
-                  </>
-                );
-              })()}
-            </div>
-          </Card>
+          ))}
         </div>
-      )}
+        <span className="ml-3">Survol = details OHLC + RV</span>
+      </div>
     </div>
   );
 }
