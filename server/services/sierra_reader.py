@@ -160,12 +160,29 @@ def sierra_read_last_bars(n=20, symbol=None):
             if k in ["\u03c3", "\u03c1", "MA", "Avg", "Stochastic Function", "Trigger", "Center Line"]:
                 greeks[k] = last[key]
 
+        # Extract GEX/MenthorQ specific columns
+        gex_data = {}
+        GEX_KEYS = [
+            "Call Resistance", "Put Support", "Put Support & Put Support 0DTE",
+            "HVL", "HVL 0DTE", "1D Min", "1D Max",
+            "Call Resistance 0DTE & Gamma Wall 0DTE", "Gamma Wall 0DTE",
+            "GEX 1", "GEX 2",
+            "Call Delta", "Put Delta", "Total Delta",
+            "Call GEX", "Put GEX", "Total GEX",
+            "GTS", "Volatility Trend",
+        ]
+        for key in last:
+            k = key.strip()
+            if k in GEX_KEYS:
+                gex_data[k] = last[key]
+
         result = {
             "symbol": symbol or "USEquities",
             "signals": signals,
             "studies": studies,
             "deviations": deviations,
             "greeks": greeks,
+            "gex": gex_data,
             "bars_count": len(bars),
             "total_bars": len(lines) - 1,
             "columns_count": len(header),

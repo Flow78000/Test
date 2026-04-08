@@ -243,9 +243,9 @@
     {
       "date": "2026-04-08",
       "regime": "HEDGE",
-      "dpss": 0.0295,
-      "gex_net": -11375782317.37,
-      "flow_score": 0.3958,
+      "dpss": 0.0707,
+      "gex_net": -5711768.34,
+      "flow_score": 0.5305,
       "confidence": 33
     }
   ],
