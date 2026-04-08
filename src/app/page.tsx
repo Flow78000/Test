@@ -56,7 +56,7 @@ async function loadAll(): Promise<DashData | null> {
       darkPools: (flow?.data || flow || []).slice(0, 5),
       flowAlerts: (flow?.data || flow || []).slice(0, 3),
       tide: tide?.data || tide || null,
-      signals: (sierra?.data || sierra?.signals || []).slice(0, 5),
+      signals: (sierra?.signals || sierra?.data || []).slice(0, 5),
       sectors: (sect?.data || sect || []).slice(0, 5),
       sierraFreshness: sierra ? {
         file_modified: sierra.file_modified,

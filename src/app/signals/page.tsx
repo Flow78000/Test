@@ -235,10 +235,10 @@ export default function SignalsPage() {
           <Card className="overflow-hidden mb-6">
             <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3">
               <span className="text-sm font-bold">Fil de Signaux Mean Reversion</span>
-              <span className="text-xs text-[#6B6B75] ml-auto">{(data.recent_signals || []).length} signaux</span>
+              <span className="text-xs text-[#6B6B75] ml-auto">{(data.signals || []).length} signaux</span>
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-[#1A1A1E]">
-              {(data.recent_signals || []).slice(0, 30).map((s: any, i: number) => {
+              {(data.signals || []).slice(0, 30).map((s: any, i: number) => {
                 // Calculate signal age
                 const signalTime = s.date && s.time ? new Date(`${s.date.replace(/-/g,'/')} ${s.time.split('.')[0]}`) : null;
                 const now = new Date();
