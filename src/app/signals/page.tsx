@@ -183,6 +183,31 @@ export default function SignalsPage() {
             </div>
           </Card>
 
+          {/* VXX/SPXS Vol Synth Confirmateurs */}
+          <Card className="p-5 mb-6">
+            <h3 className="text-xs text-[#6B6B75] uppercase tracking-widest mb-3">Confirmateurs Vol Synthetique (VXX / SPXS)</h3>
+            <p className="text-xs text-[#6B6B75] mb-3">
+              Quand les sigma sur VXX/SPXS depassent 200%, la volatilite est en regime extreme.
+              Ces signaux CONFIRMENT les signaux MR sur les indices — ne pas les utiliser seuls.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#0A0A0E] rounded-lg p-3">
+                <div className="text-[10px] text-[#6B6B75] uppercase mb-1">VXX Sigma</div>
+                <div className="text-lg font-extrabold font-mono text-[#FFA726]">En attente</div>
+                <div className="text-[9px] text-[#6B6B75] mt-1">Sierra: VXX-NQTV-BarStudyData.csv</div>
+              </div>
+              <div className="bg-[#0A0A0E] rounded-lg p-3">
+                <div className="text-[10px] text-[#6B6B75] uppercase mb-1">SPXS Sigma</div>
+                <div className="text-lg font-extrabold font-mono text-[#FFA726]">En attente</div>
+                <div className="text-[9px] text-[#6B6B75] mt-1">Sierra: SPXS-NQTV-BarStudyData.csv</div>
+              </div>
+            </div>
+            <div className="mt-3 bg-[#FF6B0008] border border-[#FF6B0022] rounded-lg p-3 text-xs text-[#6B6B75]">
+              <span className="font-bold text-[#FF6B00]">Regle :</span> Sigma VXX &gt; 300% + Signal MR sur ES/NQ = confirmation FORTE.
+              Sigma VXX &gt; 500% = regime de vol extreme &rarr; credit spreads OTM uniquement.
+            </div>
+          </Card>
+
           {/* Signal Feed */}
           <Card className="overflow-hidden mb-6">
             <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3">

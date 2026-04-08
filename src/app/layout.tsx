@@ -37,6 +37,7 @@ export default function RootLayout({
               <NavTab href="/flow" label="Flow" badge="LIVE" />
               <NavTab href="/greeks" label="GEX" badge="LIVE" />
               <NavTab href="/regime" label="Regime" badge="LIVE" />
+              <NavTab href="/dark-pool" label="DP" badge="LIVE" />
               <NavTab href="/signals" label="Signaux" badge="LIVE" />
               <span className="w-px h-4 bg-[#1E1E22] mx-0.5" />
               <NavTab href="/vol-desk" label="Vol" />

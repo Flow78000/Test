@@ -8,6 +8,11 @@ import {
   Cell,
   Tooltip,
   ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from "recharts";
 
 // ---------------------------------------------------------------------------
@@ -374,6 +379,15 @@ export default function HeatmapPage() {
 
   const dominantSentiment = summary.net >= 0 ? "BULL" : "BEAR";
 
+  // 60-day simulated rotation data
+  const rotationHistory = useMemo(() =>
+    Array.from({ length: 60 }, (_, i) => ({
+      day: i + 1,
+      cyclical: Math.round((Math.sin(i * 0.1) * 30 + 50 + Math.abs(Math.sin(i * 0.37)) * 20) * 10) / 10,
+      defensive: Math.round((Math.cos(i * 0.1) * 25 + 45 + Math.abs(Math.cos(i * 0.53)) * 15) * 10) / 10,
+    })),
+  []);
+
   return (
     <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
       <PageHeader title="Heatmap Sectorielle" subtitle="Carte thermique des flux d'options par secteur ETF">
@@ -579,6 +593,63 @@ export default function HeatmapPage() {
               </div>
             </Card>
           </div>
+
+          {/* GEX Regime Coupling */}
+          <Card className="p-5 mt-4 mb-4">
+            <h3 className="text-xs text-[#6B6B75] uppercase tracking-widest mb-3">Couplage GEX / Regime Sectoriel</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[#0A0A0E] rounded-lg p-4">
+                <div className="text-sm font-bold text-[#22C55E] mb-2">GEX Positif (Long Gamma)</div>
+                <p className="text-xs text-[#6B6B75] leading-relaxed">
+                  Market makers stabilisent &rarr; secteurs defensifs (XLP, XLU) sous-performent car pas besoin de couverture.
+                  Favoriser : XLK, XLY (growth/cycliques). Strategies : directionnelles longues, covered calls.
+                </p>
+              </div>
+              <div className="bg-[#0A0A0E] rounded-lg p-4">
+                <div className="text-sm font-bold text-[#EF4444] mb-2">GEX Negatif (Short Gamma)</div>
+                <p className="text-xs text-[#6B6B75] leading-relaxed">
+                  Market makers amplifient &rarr; secteurs defensifs (XLP, XLU, XLV) surperforment comme refuge.
+                  Eviter : XLK, XLY. Strategies : credit spreads OTM, hedges via puts sectoriels.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* 60-Day Rotation Chart */}
+          <Card className="p-5 mb-4">
+            <h3 className="text-xs text-[#6B6B75] uppercase tracking-widest mb-3">Rotation Cycliques vs Defensifs — 60 Jours</h3>
+            <div style={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={rotationHistory}>
+                  <defs>
+                    <linearGradient id="gradCyclical" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#FF6B00" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#FF6B00" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradDefensive" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#42A5F5" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#42A5F5" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
+                  <XAxis dataKey="day" tick={{ fill: "#6B6B75", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "#1E1E22" }} />
+                  <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "#1E1E22" }} domain={[0, 100]} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#1A1A1E", border: "1px solid #2A2A2E", borderRadius: 8, fontSize: 11 }}
+                    labelStyle={{ color: "#6B6B75" }}
+                    labelFormatter={(v) => `Jour ${v}`}
+                  />
+                  <Area type="monotone" dataKey="cyclical" stroke="#FF6B00" fill="url(#gradCyclical)" strokeWidth={2} name="Cycliques" />
+                  <Area type="monotone" dataKey="defensive" stroke="#42A5F5" fill="url(#gradDefensive)" strokeWidth={2} name="Defensifs" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center gap-6 mt-2 text-[10px] text-[#6B6B75]">
+              <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#FF6B00] rounded" /> Cycliques (XLK, XLY, XLF, XLE)</div>
+              <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#42A5F5] rounded" /> Defensifs (XLP, XLU, XLV)</div>
+              <span className="ml-auto">Croisements = changements de regime potentiels</span>
+            </div>
+          </Card>
 
           {/* Market Regime Interpretation */}
           <Card className="p-5 mt-4">
