@@ -25,6 +25,52 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/* ── Expected Move Cone Visual ── */
+function ExpectedMoveCone({ move, ticker }: { move: number; ticker: string }) {
+  // move is in % (e.g. 5.2 means ±5.2%)
+  if (!move || move <= 0) return null;
+  const w = 140, h = 48;
+  const mid = h / 2;
+  const barH = 6;
+  // Scale: max cone width = move%, normalized to visual width
+  const maxPct = Math.min(move, 15); // cap at 15% for visual
+  const coneHalf = (maxPct / 15) * (w * 0.4); // cone half-height at right edge
+  const spotX = w * 0.15; // spot line position
+  const coneStartX = spotX;
+  const coneEndX = w * 0.92;
+
+  // Color based on move magnitude
+  const color = move > 8 ? "#EF4444" : move > 5 ? "#FFA726" : "#FFB300";
+  const bgColor = move > 8 ? "#EF444415" : move > 5 ? "#FFA72615" : "#FFB30015";
+
+  return (
+    <div className="mt-2 bg-[#0A0A0C] rounded-lg p-2 border border-[#1E1E22]">
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="w-full">
+        {/* Cone fill */}
+        <polygon
+          points={`${coneStartX},${mid} ${coneEndX},${mid - coneHalf} ${coneEndX},${mid + coneHalf}`}
+          fill={bgColor}
+          stroke={color}
+          strokeWidth="0.5"
+          opacity="0.6"
+        />
+        {/* Center line (spot) */}
+        <line x1={coneStartX} y1={mid} x2={coneEndX} y2={mid} stroke="#6B6B75" strokeWidth="0.5" strokeDasharray="2 2" />
+        {/* Spot marker */}
+        <circle cx={spotX} cy={mid} r={3} fill="#FF6B00" />
+        {/* Upper bound label */}
+        <text x={coneEndX + 2} y={mid - coneHalf + 3} fill={color} fontSize="7" fontFamily="monospace">+{move.toFixed(1)}%</text>
+        {/* Lower bound label */}
+        <text x={coneEndX + 2} y={mid + coneHalf + 3} fill={color} fontSize="7" fontFamily="monospace">-{move.toFixed(1)}%</text>
+        {/* Ticker label */}
+        <text x={2} y={mid + 3} fill="#FF6B00" fontSize="7" fontWeight="bold" fontFamily="monospace">{ticker}</text>
+        {/* Expiration label */}
+        <text x={coneEndX - 10} y={h - 2} fill="#555" fontSize="6" textAnchor="end">EXP</text>
+      </svg>
+    </div>
+  );
+}
+
 function dailyImpactLabel(sp500Count: number): { label: string; color: string } {
   if (sp500Count >= 5) return { label: "FORT", color: "#EF4444" };
   if (sp500Count >= 2) return { label: "MOYEN", color: "#FFB300" };
@@ -210,10 +256,15 @@ export default function EarningsPage() {
                       {e.name && <div className="text-[10px] text-[#6B6B75] truncate">{e.name}</div>}
                       {e.sector && <Badge color="#6B6B75" className="mt-1">{e.sector}</Badge>}
                       <div className="flex items-center gap-2 mt-1.5 text-[10px]">
-                        {e.expected_move != null && <span className="text-[#FFB300]">{e.expected_move.toFixed(1)}%</span>}
+                        {e.expected_move != null && (
+                          <span className="text-[#FFB300] font-mono font-bold">EM: ±{e.expected_move.toFixed(1)}%</span>
+                        )}
                         {e.eps_estimate != null && <span className="text-[#6B6B75]">EPS: {e.eps_estimate}</span>}
                       </div>
                       {e.market_cap != null && <div className="text-[10px] text-[#6B6B75] mt-0.5">{fmtCap(e.market_cap)}</div>}
+                      {e.expected_move != null && e.expected_move > 0 && (
+                        <ExpectedMoveCone move={e.expected_move} ticker={e.ticker} />
+                      )}
                     </Card>
                   );
                 })}
