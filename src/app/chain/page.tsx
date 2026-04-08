@@ -197,20 +197,22 @@ export default function ChainPage() {
 
       const raw: OptionContract[] = (chainJson?.data || chainJson || []).map((c: any) => {
         const parsed = parseOptionSymbol(c.symbol || c.option_symbol || "");
+        const strike = parsed?.strike ?? (c.strike ? parseFloat(c.strike) : 0);
+        const iv = c.implied_volatility ? parseFloat(c.implied_volatility) : (c.iv ? parseFloat(c.iv) : 0);
         return {
           symbol: c.symbol || c.option_symbol || "",
-          strike: parsed?.strike ?? c.strike ?? 0,
+          strike,
           type: parsed?.type ?? (c.type?.toLowerCase() === "put" ? "put" : "call"),
-          bid: c.bid ?? 0,
-          ask: c.ask ?? 0,
-          volume: c.volume ?? 0,
-          open_interest: c.open_interest ?? c.oi ?? 0,
-          iv: c.iv ?? c.implied_volatility ?? 0,
-          delta: c.delta ?? 0,
-          gamma: c.gamma ?? 0,
+          bid: c.bid ? parseFloat(c.bid) : 0,
+          ask: c.ask ? parseFloat(c.ask) : 0,
+          volume: c.volume ? parseInt(c.volume) : 0,
+          open_interest: c.open_interest ? parseInt(c.open_interest) : (c.oi ? parseInt(c.oi) : 0),
+          iv,
+          delta: c.delta ? parseFloat(c.delta) : 0,
+          gamma: c.gamma ? parseFloat(c.gamma) : 0,
           expiration: c.expiration ?? expiry,
         };
-      });
+      }).filter((c: any) => c.strike > 0 && !isNaN(c.strike));
 
       setContracts(raw);
       setGreeks(Array.isArray(greekJson?.data || greekJson) ? (greekJson?.data || greekJson) : []);
@@ -779,8 +781,8 @@ export default function ChainPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {hotStrikes.calls.map((c) => (
-                        <tr key={c.strike} className="border-t border-[#1E1E22]">
+                      {hotStrikes.calls.map((c, idx) => (
+                        <tr key={`call-${c.strike || idx}`} className="border-t border-[#1E1E22]">
                           <td className={`${tblCellCls} text-[#FF6B00] font-bold`}>{c.strike.toLocaleString()}</td>
                           <td className={`${tblCellCls} text-[#22C55E]`}>{fmtK(c.volume)}</td>
                           <td className={`${tblCellCls} text-[#6B6B75]`}>{fmtK(c.open_interest)}</td>
@@ -806,8 +808,8 @@ export default function ChainPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {hotStrikes.puts.map((p) => (
-                        <tr key={p.strike} className="border-t border-[#1E1E22]">
+                      {hotStrikes.puts.map((p, idx) => (
+                        <tr key={`put-${p.strike || idx}`} className="border-t border-[#1E1E22]">
                           <td className={`${tblCellCls} text-[#FF6B00] font-bold`}>{p.strike.toLocaleString()}</td>
                           <td className={`${tblCellCls} text-[#EF4444]`}>{fmtK(p.volume)}</td>
                           <td className={`${tblCellCls} text-[#6B6B75]`}>{fmtK(p.open_interest)}</td>
