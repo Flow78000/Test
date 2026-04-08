@@ -3,10 +3,20 @@
 import { useState, useEffect } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
 
+const DELTA_SIGNALS = [
+  { asset: "YM", direction: "SHORT", condition: "100% @ 50min", wr: 88, occ: 66, dd: "0.14%" },
+  { asset: "NQ", direction: "SHORT", condition: "U3 @ 10min", wr: 100, occ: 10, dd: "0.12%" },
+  { asset: "YM", direction: "LONG", condition: "L3", wr: 100, occ: 6, dd: "0.10%" },
+  { asset: "ES", direction: "BULL", condition: "z>3 (20 bars)", wr: 67.5, occ: 323, dd: "--" },
+];
+
 export default function SignalsPage() {
   const [data, setData] = useState<any>(null);
   const [perfData, setPerfData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [vixData, setVixData] = useState<any>(null);
+  const [perfOpen, setPerfOpen] = useState(false);
+  const [perfShowAll, setPerfShowAll] = useState(false);
 
   async function loadSignals() {
     setLoading(true);
@@ -21,7 +31,19 @@ export default function SignalsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { loadSignals(); const i = setInterval(loadSignals, 30000); return () => clearInterval(i); }, []);
+  async function loadVix() {
+    try {
+      const res = await fetch("http://localhost:3850/api/uw/iv-rank?ticker=SPY").then(r => r.json());
+      setVixData(res);
+    } catch { /* silently fail */ }
+  }
+
+  useEffect(() => {
+    loadSignals();
+    loadVix();
+    const i = setInterval(loadSignals, 30000);
+    return () => clearInterval(i);
+  }, []);
 
   return (
     <div className="p-6">
@@ -76,6 +98,91 @@ export default function SignalsPage() {
             ))}
           </div>
 
+          {/* ── VIX Risk Triggers ── */}
+          <Card className="overflow-hidden mb-6">
+            <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3">
+              <span className="text-sm font-bold">VIX Risk Triggers</span>
+              {vixData?.iv_rank != null && (
+                <span className="ml-auto text-xs font-mono">
+                  IV Rank SPY: <span className={`font-bold ${vixData.iv_rank > 50 ? "text-[#EF4444]" : vixData.iv_rank > 25 ? "text-[#FFB300]" : "text-[#22C55E]"}`}>
+                    {typeof vixData.iv_rank === "number" ? vixData.iv_rank.toFixed(1) : vixData.iv_rank}%
+                  </span>
+                </span>
+              )}
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-[#FFB30008] border border-[#FFB30020]">
+                <span className="text-[#FFB300] text-lg font-bold mt-0.5">+25%</span>
+                <div>
+                  <div className="text-xs font-semibold text-[#FFB300] mb-0.5">Hedging Institutionnel Force</div>
+                  <div className="text-[11px] text-[#6B6B75]">VIX +25% = les institutionnels sont forces de couvrir = squeeze haussier sur les indices. Signal contrarian LONG indices.</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-[#EF444408] border border-[#EF444420]">
+                <span className="text-[#EF4444] text-lg font-bold mt-0.5">+50%</span>
+                <div>
+                  <div className="text-xs font-semibold text-[#EF4444] mb-0.5">Vol Control Funds — Squeeze Extreme</div>
+                  <div className="text-[11px] text-[#6B6B75]">VIX +50% = les fonds de controle de volatilite vendent massivement = squeeze extreme. Fenetre d'opportunite rare.</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-[#AB47BC08] border border-[#AB47BC20]">
+                <span className="text-[#AB47BC] text-lg font-bold mt-0.5">sigma</span>
+                <div>
+                  <div className="text-xs font-semibold text-[#AB47BC] mb-0.5">Signal Sigma VIX</div>
+                  <div className="text-[11px] text-[#6B6B75]">Signaux sigma VIX = stopper les longs directionnels, basculer sur credit spreads OTM. Protection de portefeuille prioritaire.</div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* ── Delta Flow Signals ── */}
+          <Card className="overflow-hidden mb-6">
+            <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3">
+              <span className="text-sm font-bold">Delta Flow Signals</span>
+              <span className="text-[10px] text-[#6B6B75] ml-auto">Meilleurs signaux decouverts</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-[#111114]">
+                  <tr className="text-[#6B6B75] uppercase text-[10px] tracking-wider">
+                    <th className="text-left p-3">Actif</th>
+                    <th className="text-left p-3">Direction</th>
+                    <th className="text-left p-3">Condition</th>
+                    <th className="p-3">Win Rate</th>
+                    <th className="p-3">Occurrences</th>
+                    <th className="p-3">Avg DD</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1A1A1E]">
+                  {DELTA_SIGNALS.map((s, i) => (
+                    <tr key={i} className="hover:bg-[#FF6B0006]">
+                      <td className="p-3 font-mono font-bold text-[#FF6B00]">{s.asset}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          s.direction === "LONG" || s.direction === "BULL"
+                            ? "bg-[#22C55E22] text-[#22C55E]"
+                            : "bg-[#EF444422] text-[#EF4444]"
+                        }`}>
+                          {s.direction}
+                        </span>
+                      </td>
+                      <td className="p-3 text-[#6B6B75] font-mono">{s.condition}</td>
+                      <td className="p-3 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          s.wr >= 90 ? "bg-[#22C55E22] text-[#22C55E]" : s.wr >= 70 ? "bg-[#FFB30022] text-[#FFB300]" : "bg-[#42A5F522] text-[#42A5F5]"
+                        }`}>
+                          {s.wr}%
+                        </span>
+                      </td>
+                      <td className="p-3 text-center font-mono">{s.occ}</td>
+                      <td className="p-3 text-center font-mono text-[#6B6B75]">{s.dd}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
           {/* Signal Feed */}
           <Card className="overflow-hidden mb-6">
             <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3">
@@ -117,53 +224,80 @@ export default function SignalsPage() {
             </div>
           </Card>
 
-          {/* Performance Table */}
+          {/* ── Performance Table — Accordion ── */}
           {perfData?.assets && (
             <Card className="overflow-hidden">
-              <div className="px-5 py-3 border-b border-[#1E1E22]">
-                <span className="text-sm font-bold">Performance Historique — Top Signaux</span>
-              </div>
-              <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-[#111114]">
-                    <tr className="text-[#6B6B75] uppercase text-[10px] tracking-wider">
-                      <th className="text-left p-3">Actif</th>
-                      <th className="text-left p-3">Signal</th>
-                      <th className="p-3">N</th>
-                      <th className="p-3">Win%</th>
-                      <th className="p-3">Avg DD%</th>
-                      <th className="p-3">Avg Prof%</th>
-                      <th className="p-3">P/DD</th>
-                      <th className="p-3">Rating</th>
-                      <th className="p-3">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1A1A1E]">
-                    {Object.entries(perfData.assets).flatMap(([sym, assetPerf]: [string, any]) => {
-                      const hz = assetPerf?.horizons?.moyen || assetPerf?.horizons?.court || {};
-                      return (hz.signals || []).filter((s: any) => s.rating === "A" || s.rating === "B").map((s: any, i: number) => (
-                        <tr key={`${sym}-${i}`} className="hover:bg-[#FF6B0006]">
-                          <td className="p-3 font-mono font-bold text-[#FF6B00]">{sym.replace(".CME","").replace(".CBOT","")}</td>
-                          <td className="p-3">{s.signal}</td>
-                          <td className="p-3 text-center font-mono">{s.occurrences}</td>
-                          <td className="p-3 text-center font-mono font-bold" style={{ color: s.win_rate >= 65 ? "#22C55E" : s.win_rate >= 55 ? "#FFA726" : "#EF4444" }}>
-                            {s.win_rate}%
-                          </td>
-                          <td className="p-3 text-center font-mono">{s.avg_drawdown_pct}%</td>
-                          <td className="p-3 text-center font-mono text-[#22C55E]">{s.avg_profit_pct}%</td>
-                          <td className="p-3 text-center font-mono">{s.profit_dd_ratio}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.rating === "A" ? "bg-[#22C55E22] text-[#22C55E]" : "bg-[#FFA72622] text-[#FFA726]"}`}>
-                              {s.rating}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center font-mono text-[#FF6B00] font-bold">{s.score}</td>
+              <button
+                onClick={() => setPerfOpen(!perfOpen)}
+                className="w-full px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3 hover:bg-[#FF6B0006] transition-colors cursor-pointer"
+              >
+                <span className="text-sm font-bold">Performance Historique</span>
+                <span className="text-[10px] text-[#6B6B75]">— cliquez pour {perfOpen ? "fermer" : "ouvrir"}</span>
+                <span className="ml-auto text-[#6B6B75] text-sm transition-transform" style={{ transform: perfOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+                  ▼
+                </span>
+              </button>
+              {perfOpen && (
+                <>
+                  <div className="px-5 py-2 border-b border-[#1A1A1E] flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-[10px] text-[#6B6B75] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={perfShowAll}
+                        onChange={e => setPerfShowAll(e.target.checked)}
+                        className="accent-[#FF6B00]"
+                      />
+                      Afficher tous les signaux (pas seulement A/B)
+                    </label>
+                  </div>
+                  <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: "600px" }}>
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-[#111114]">
+                        <tr className="text-[#6B6B75] uppercase text-[10px] tracking-wider">
+                          <th className="text-left p-3">Actif</th>
+                          <th className="text-left p-3">Signal</th>
+                          <th className="p-3">N</th>
+                          <th className="p-3">Win%</th>
+                          <th className="p-3">Avg DD%</th>
+                          <th className="p-3">Avg Prof%</th>
+                          <th className="p-3">P/DD</th>
+                          <th className="p-3">Rating</th>
+                          <th className="p-3">Score</th>
                         </tr>
-                      ));
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-[#1A1A1E]">
+                        {Object.entries(perfData.assets).flatMap(([sym, assetPerf]: [string, any]) => {
+                          const hz = assetPerf?.horizons?.moyen || assetPerf?.horizons?.court || {};
+                          return (hz.signals || [])
+                            .filter((s: any) => perfShowAll || s.rating === "A" || s.rating === "B")
+                            .map((s: any, i: number) => {
+                              const ratingColor = s.rating === "A" ? "#22C55E" : s.rating === "B" ? "#FFA726" : s.rating === "C" ? "#42A5F5" : "#6B6B75";
+                              return (
+                                <tr key={`${sym}-${i}`} className="hover:bg-[#FF6B0006]">
+                                  <td className="p-3 font-mono font-bold text-[#FF6B00]">{sym.replace(".CME","").replace(".CBOT","")}</td>
+                                  <td className="p-3">{s.signal}</td>
+                                  <td className="p-3 text-center font-mono">{s.occurrences}</td>
+                                  <td className="p-3 text-center font-mono font-bold" style={{ color: s.win_rate >= 65 ? "#22C55E" : s.win_rate >= 55 ? "#FFA726" : "#EF4444" }}>
+                                    {s.win_rate}%
+                                  </td>
+                                  <td className="p-3 text-center font-mono">{s.avg_drawdown_pct}%</td>
+                                  <td className="p-3 text-center font-mono text-[#22C55E]">{s.avg_profit_pct}%</td>
+                                  <td className="p-3 text-center font-mono">{s.profit_dd_ratio}</td>
+                                  <td className="p-3 text-center">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold`} style={{ background: `${ratingColor}22`, color: ratingColor }}>
+                                      {s.rating}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-center font-mono text-[#FF6B00] font-bold">{s.score}</td>
+                                </tr>
+                              );
+                            });
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </Card>
           )}
         </>

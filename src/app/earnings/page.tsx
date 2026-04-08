@@ -25,6 +25,12 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+function dailyImpactLabel(sp500Count: number): { label: string; color: string } {
+  if (sp500Count >= 5) return { label: "FORT", color: "#EF4444" };
+  if (sp500Count >= 2) return { label: "MOYEN", color: "#FFB300" };
+  return { label: "FAIBLE", color: "#6B6B75" };
+}
+
 interface Earning {
   ticker: string;
   name?: string;
@@ -141,39 +147,64 @@ export default function EarningsPage() {
 
       {/* Week nav */}
       <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => setWeekOffset(w => w - 1)} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">Sem. prec.</button>
-        <button onClick={() => setWeekOffset(0)} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">Cette sem.</button>
-        <button onClick={() => setWeekOffset(w => w + 1)} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">Sem. suiv.</button>
+        <button onClick={() => setWeekOffset(w => w - 1)} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
+          ← Sem. prec.
+        </button>
+        <button onClick={() => setWeekOffset(0)} className={`px-3 py-1.5 border rounded-lg text-xs transition-colors ${weekOffset === 0 ? "bg-[#FF6B00] text-black border-[#FF6B00]" : "bg-[#111114] border-[#1E1E22] hover:border-[#FF6B00]"}`}>
+          Cette semaine
+        </button>
+        <button onClick={() => setWeekOffset(w => w + 1)} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
+          Sem. suiv. →
+        </button>
         <span className="text-xs text-[#6B6B75] ml-2">{weekDates[0]} au {weekDates[4]}</span>
       </div>
 
       {/* 5-column grid */}
       <div className="grid grid-cols-5 gap-3">
-        {weekDates.map((date, di) => (
-          <div key={date}>
-            <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-2 text-center">{DAYS[di]} {date.slice(5)}</div>
-            <div className="space-y-2">
-              {byDay[di].length === 0 ? (
-                <Card className="p-3 text-center text-[10px] text-[#6B6B75]">Aucun</Card>
-              ) : byDay[di].map((e: any, i: number) => (
-                <Card key={i} className={"p-3" + (e.is_sp500 ? " border-[#FF6B00]/30" : "")} hover>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-sm font-bold text-[#FF6B00]">{e.ticker}</span>
-                    <Badge color={e.session === "PRE" ? "#42A5F5" : "#AB47BC"}>{e.session}</Badge>
-                  </div>
-                  {e.name && <div className="text-[10px] text-[#6B6B75] truncate">{e.name}</div>}
-                  {e.sector && <Badge color="#6B6B75" className="mt-1">{e.sector}</Badge>}
-                  <div className="flex items-center gap-2 mt-1.5 text-[10px]">
-                    {e.expected_move != null && <span className="text-[#FFB300]">{e.expected_move.toFixed(1)}%</span>}
-                    {e.eps_estimate != null && <span className="text-[#6B6B75]">EPS: {e.eps_estimate}</span>}
-                  </div>
-                  {e.market_cap != null && <div className="text-[10px] text-[#6B6B75] mt-0.5">{fmtCap(e.market_cap)}</div>}
-                  {e.is_sp500 && <span className="text-[8px] text-[#FF6B00] font-semibold">S&P 500</span>}
-                </Card>
-              ))}
+        {weekDates.map((date, di) => {
+          const daySp500 = byDay[di].filter(e => e.is_sp500).length;
+          const impact = dailyImpactLabel(daySp500);
+          return (
+            <div key={date}>
+              <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-1 text-center">{DAYS[di]} {date.slice(5)}</div>
+              {daySp500 > 0 && (
+                <div className="text-center mb-2">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded" style={{ background: `${impact.color}22`, color: impact.color, border: `1px solid ${impact.color}44` }}>
+                    Impact {impact.label} — {daySp500} S&P 500
+                  </span>
+                </div>
+              )}
+              <div className="space-y-2">
+                {byDay[di].length === 0 ? (
+                  <Card className="p-3 text-center text-[10px] text-[#6B6B75]">Aucun</Card>
+                ) : byDay[di].map((e: any, i: number) => {
+                  const isTech = (e.sector || "").toLowerCase().includes("technolog");
+                  return (
+                    <Card key={i} className={"p-3" + (e.is_sp500 ? " border-[#FF6B00]/30" : "")} hover>
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <span className="text-sm font-bold text-[#FF6B00]">{e.ticker}</span>
+                        <Badge color={e.session === "PRE" ? "#42A5F5" : "#AB47BC"}>{e.session}</Badge>
+                        {e.is_sp500 && (
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#FF6B00]/15 text-[#FF6B00] border border-[#FF6B00]/30">SPY</span>
+                        )}
+                        {isTech && (
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#42A5F5]/15 text-[#42A5F5] border border-[#42A5F5]/30">QQQ</span>
+                        )}
+                      </div>
+                      {e.name && <div className="text-[10px] text-[#6B6B75] truncate">{e.name}</div>}
+                      {e.sector && <Badge color="#6B6B75" className="mt-1">{e.sector}</Badge>}
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px]">
+                        {e.expected_move != null && <span className="text-[#FFB300]">{e.expected_move.toFixed(1)}%</span>}
+                        {e.eps_estimate != null && <span className="text-[#6B6B75]">EPS: {e.eps_estimate}</span>}
+                      </div>
+                      {e.market_cap != null && <div className="text-[10px] text-[#6B6B75] mt-0.5">{fmtCap(e.market_cap)}</div>}
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

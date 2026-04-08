@@ -13,6 +13,15 @@ const SOURCE_COLORS: Record<string, string> = {
   benzinga: "#22C55E", bloomberg: "#7C3AED", default: "#6B6B75",
 };
 
+const CATEGORY_FILTERS: Record<string, string[]> = {
+  ALL: [],
+  Indices: ["SPX", "SPY", "QQQ", "S&P", "NASDAQ", "DOW", "RUSSELL"],
+  Taux: ["TREASURY", "YIELD", "BOND", "FED", "RATE", "TAUX", "FOMC"],
+  Commodities: ["OIL", "GOLD", "SILVER", "CRUDE", "COMMODITY", "WHEAT", "CORN", "COPPER"],
+  FX: ["DOLLAR", "EURO", "YEN", "FOREX", "CURRENCY", "DXY", "EURUSD"],
+  Tech: ["AAPL", "NVDA", "TSLA", "MSFT", "GOOGL", "META", "TECH", "AI", "CHIP"],
+};
+
 function impactOf(name: string, raw?: string): { label: string; color: string; pulse: boolean } {
   const n = (name || "").toUpperCase();
   if (CRITIQUE_KW.some(k => n.includes(k.toUpperCase()))) return { label: "CRITIQUE", color: "#EF4444", pulse: true };
@@ -81,6 +90,13 @@ function sentimentDot(s?: string) {
   );
 }
 
+function matchesCategory(headline: string, category: string): boolean {
+  if (category === "ALL") return true;
+  const keywords = CATEGORY_FILTERS[category] || [];
+  const upper = (headline || "").toUpperCase();
+  return keywords.some(kw => upper.includes(kw));
+}
+
 export default function NewsPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
@@ -88,6 +104,7 @@ export default function NewsPage() {
   const [error, setError] = useState("");
   const [tz, setTz] = useState("ET");
   const [majorsOnly, setMajorsOnly] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("ALL");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,12 +124,13 @@ export default function NewsPage() {
 
   const todayEvents = events.filter((ev: any) => isToday(ev.date || ev.datetime || "", tz));
 
-  const filteredNews = majorsOnly
-    ? news.filter((n: any) => {
-        const imp = impactOf(n.headline || n.title || "", n.impact);
-        return imp.label === "CRITIQUE" || imp.label === "HAUT";
-      })
-    : news;
+  const filteredNews = news.filter((n: any) => {
+    const headline = n.headline || n.title || "";
+    const imp = impactOf(headline, n.impact);
+    if (majorsOnly && imp.label !== "CRITIQUE" && imp.label !== "HAUT") return false;
+    if (!matchesCategory(headline, activeCategory)) return false;
+    return true;
+  });
 
   if (loading) return (
     <div className="p-6">
@@ -181,9 +199,27 @@ export default function NewsPage() {
 
       {/* ── News Feed ── */}
       <div>
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
           <span className="text-xs text-[#6B6B75] uppercase tracking-wider font-semibold">Fil d'actualites</span>
-          {/* Pill toggle */}
+
+          {/* Category filter pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {Object.keys(CATEGORY_FILTERS).map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all border ${
+                  activeCategory === cat
+                    ? "bg-[#FF6B00] text-black border-[#FF6B00]"
+                    : "bg-[#111114] text-[#6B6B75] border-[#1E1E22] hover:border-[#FF6B00] hover:text-white"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Majors only toggle */}
           <button onClick={() => setMajorsOnly(!majorsOnly)}
             className={`ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
               majorsOnly
@@ -196,7 +232,7 @@ export default function NewsPage() {
         </div>
 
         {filteredNews.length === 0 ? (
-          <Card className="p-8 text-center text-[#6B6B75] text-sm">Aucune actualite</Card>
+          <Card className="p-8 text-center text-[#6B6B75] text-sm">Aucune actualite pour cette categorie</Card>
         ) : (
           <div className="grid gap-3 max-h-[600px] overflow-y-auto pr-1">
             {filteredNews.slice(0, 50).map((n: any, i: number) => {
