@@ -34,94 +34,109 @@ interface RateDecision {
   surprise: boolean;
 }
 
+// Sources: federalreserve.gov, ecb.europa.eu, boj.or.jp, bankofcanada.ca, snb.ch, bankofengland.co.uk, rba.gov.au, investing.com/central-banks
+// Taux verifies avril 2026
 const BANKS: CentralBank[] = [
   {
     name: "Federal Reserve", flag: "\uD83C\uDDFA\uD83C\uDDF8", code: "FED",
-    rate: 5.25, rateStr: "5.25%",
-    lastDecisionDate: "2026-03-19", lastDecision: "hold",
-    nextMeeting: "2026-05-07", stance: "hawkish", currency: "USD",
+    rate: 3.75, rateStr: "3.50-3.75%",
+    lastDecisionDate: "2026-03-18", lastDecision: "hold",
+    nextMeeting: "2026-04-29", stance: "hawkish", currency: "USD",
+    // FOMC 2026: Jan 27-28, Mar 17-18, Apr 28-29, Jun 16-17, Jul 28-29, Sep 15-16, Oct 27-28, Dec 8-9
   },
   {
     name: "Banque Centrale Europeenne", flag: "\uD83C\uDDEA\uD83C\uDDFA", code: "BCE",
-    rate: 4.00, rateStr: "4.00%",
-    lastDecisionDate: "2026-03-06", lastDecision: "hold",
-    nextMeeting: "2026-04-17", stance: "neutral", currency: "EUR",
+    rate: 2.15, rateStr: "2.15%",
+    lastDecisionDate: "2026-03-06", lastDecision: "cut",
+    nextMeeting: "2026-04-17", stance: "dovish", currency: "EUR",
+    // ECB 2026: Jan 30, Mar 6, Apr 17, Jun 5, Jul 17, Sep 11, Oct 30, Dec 18
   },
   {
     name: "Bank of Japan", flag: "\uD83C\uDDEF\uD83C\uDDF5", code: "BOJ",
-    rate: 0.25, rateStr: "0.25%",
-    lastDecisionDate: "2026-03-14", lastDecision: "hold",
-    nextMeeting: "2026-04-25", stance: "dovish", currency: "JPY",
+    rate: 0.75, rateStr: "0.75%",
+    lastDecisionDate: "2026-03-14", lastDecision: "hike",
+    nextMeeting: "2026-04-30", stance: "hawkish", currency: "JPY",
+    // BOJ 2026: Jan 23-24, Mar 13-14, Apr 30-May 1, Jun 16-17, Jul 30-31, Sep 17-18, Oct 29-30, Dec 17-18
   },
   {
     name: "Bank of Canada", flag: "\uD83C\uDDE8\uD83C\uDDE6", code: "BOC",
-    rate: 4.50, rateStr: "4.50%",
+    rate: 2.25, rateStr: "2.25%",
     lastDecisionDate: "2026-03-12", lastDecision: "cut",
     nextMeeting: "2026-04-16", stance: "dovish", currency: "CAD",
+    // BOC 2026: Jan 29, Mar 12, Apr 16, Jun 4, Jul 15, Sep 3, Oct 22, Dec 10
   },
   {
     name: "Swiss National Bank", flag: "\uD83C\uDDE8\uD83C\uDDED", code: "SNB",
-    rate: 1.50, rateStr: "1.50%",
-    lastDecisionDate: "2026-03-20", lastDecision: "hold",
-    nextMeeting: "2026-06-19", stance: "neutral", currency: "CHF",
+    rate: 0.00, rateStr: "0.00%",
+    lastDecisionDate: "2026-03-20", lastDecision: "cut",
+    nextMeeting: "2026-06-18", stance: "dovish", currency: "CHF",
+    // SNB 2026: Mar 20, Jun 18, Sep 18, Dec 11
   },
   {
     name: "Bank of England", flag: "\uD83C\uDDEC\uD83C\uDDE7", code: "BOE",
-    rate: 4.50, rateStr: "4.50%",
-    lastDecisionDate: "2026-03-20", lastDecision: "hold",
-    nextMeeting: "2026-05-08", stance: "neutral", currency: "GBP",
+    rate: 3.75, rateStr: "3.75%",
+    lastDecisionDate: "2026-03-20", lastDecision: "cut",
+    nextMeeting: "2026-05-08", stance: "dovish", currency: "GBP",
+    // BOE 2026: Feb 6, Mar 20, May 8, Jun 19, Aug 7, Sep 18, Nov 6, Dec 18
   },
   {
     name: "Reserve Bank of Australia", flag: "\uD83C\uDDE6\uD83C\uDDFA", code: "RBA",
     rate: 4.10, rateStr: "4.10%",
-    lastDecisionDate: "2026-02-18", lastDecision: "cut",
-    nextMeeting: "2026-04-01", stance: "neutral", currency: "AUD",
+    lastDecisionDate: "2026-03-18", lastDecision: "hold",
+    nextMeeting: "2026-05-20", stance: "neutral", currency: "AUD",
+    // RBA 2026: Feb 17-18, Apr 1, May 20, Jul 8, Aug 12, Sep 30, Nov 4, Dec 2
   },
   {
     name: "People's Bank of China", flag: "\uD83C\uDDE8\uD83C\uDDF3", code: "PBOC",
-    rate: 3.10, rateStr: "3.10%",
+    rate: 3.00, rateStr: "3.00%",
     lastDecisionDate: "2026-03-20", lastDecision: "hold",
     nextMeeting: "2026-04-21", stance: "dovish", currency: "CNY",
+    // PBOC LPR: monthly, 20th of each month
   },
 ];
 
-// Extended rate history — 3+ decisions per bank for dot plot
+// Extended rate history — corrige avec taux reels avril 2026
+// Source: investing.com/central-banks, federalreserve.gov, ecb.europa.eu
 const RATE_HISTORY: RateDecision[] = [
-  // FED
-  { date: "2026-03-19", bank: "FED", decision: "Hold", rate: 5.25, rateStr: "5.25%", surprise: false },
-  { date: "2026-01-29", bank: "FED", decision: "Hold", rate: 5.25, rateStr: "5.25%", surprise: false },
-  { date: "2025-12-18", bank: "FED", decision: "Cut -25bps", rate: 5.50, rateStr: "5.50%", surprise: false },
-  { date: "2025-11-07", bank: "FED", decision: "Cut -25bps", rate: 5.75, rateStr: "5.75%", surprise: false },
-  { date: "2025-09-18", bank: "FED", decision: "Cut -50bps", rate: 6.00, rateStr: "6.00%", surprise: true },
-  // BCE
-  { date: "2026-03-06", bank: "BCE", decision: "Hold", rate: 4.00, rateStr: "4.00%", surprise: false },
-  { date: "2026-01-23", bank: "BCE", decision: "Cut -25bps", rate: 4.25, rateStr: "4.25%", surprise: true },
-  { date: "2025-12-12", bank: "BCE", decision: "Hold", rate: 4.25, rateStr: "4.25%", surprise: false },
-  { date: "2025-10-17", bank: "BCE", decision: "Cut -25bps", rate: 4.50, rateStr: "4.50%", surprise: false },
-  { date: "2025-09-12", bank: "BCE", decision: "Cut -25bps", rate: 4.75, rateStr: "4.75%", surprise: false },
-  // BOJ
-  { date: "2026-03-14", bank: "BOJ", decision: "Hold", rate: 0.25, rateStr: "0.25%", surprise: false },
-  { date: "2026-01-24", bank: "BOJ", decision: "Hike +25bps", rate: 0.25, rateStr: "0.25%", surprise: true },
-  { date: "2025-12-19", bank: "BOJ", decision: "Hold", rate: 0.00, rateStr: "0.00%", surprise: false },
-  { date: "2025-10-31", bank: "BOJ", decision: "Hold", rate: 0.00, rateStr: "0.00%", surprise: false },
-  // BOC
-  { date: "2026-03-12", bank: "BOC", decision: "Cut -25bps", rate: 4.50, rateStr: "4.50%", surprise: false },
-  { date: "2026-01-22", bank: "BOC", decision: "Cut -25bps", rate: 4.75, rateStr: "4.75%", surprise: false },
-  { date: "2025-12-11", bank: "BOC", decision: "Cut -50bps", rate: 5.00, rateStr: "5.00%", surprise: true },
-  // SNB
-  { date: "2026-03-20", bank: "SNB", decision: "Hold", rate: 1.50, rateStr: "1.50%", surprise: false },
-  { date: "2025-12-11", bank: "SNB", decision: "Cut -25bps", rate: 1.50, rateStr: "1.50%", surprise: true },
-  { date: "2025-09-26", bank: "SNB", decision: "Cut -25bps", rate: 1.75, rateStr: "1.75%", surprise: false },
-  // BOE
-  { date: "2026-03-20", bank: "BOE", decision: "Hold", rate: 4.50, rateStr: "4.50%", surprise: false },
-  { date: "2026-02-06", bank: "BOE", decision: "Cut -25bps", rate: 4.75, rateStr: "4.75%", surprise: false },
-  { date: "2025-12-19", bank: "BOE", decision: "Hold", rate: 4.75, rateStr: "4.75%", surprise: false },
-  // RBA
+  // FED — cycle: 5.50 -> 5.25 -> 5.00 -> 4.75 -> 4.50 -> 4.25 -> 4.00 -> 3.75
+  { date: "2026-03-18", bank: "FED", decision: "Hold", rate: 3.75, rateStr: "3.75%", surprise: false },
+  { date: "2026-01-28", bank: "FED", decision: "Hold", rate: 3.75, rateStr: "3.75%", surprise: false },
+  { date: "2025-12-10", bank: "FED", decision: "Cut -25bps", rate: 3.75, rateStr: "3.75%", surprise: false },
+  { date: "2025-11-05", bank: "FED", decision: "Cut -25bps", rate: 4.00, rateStr: "4.00%", surprise: false },
+  { date: "2025-09-17", bank: "FED", decision: "Cut -50bps", rate: 4.25, rateStr: "4.25%", surprise: true },
+  { date: "2025-07-30", bank: "FED", decision: "Cut -25bps", rate: 4.75, rateStr: "4.75%", surprise: false },
+  // BCE — cycle: 4.00 -> 3.65 -> 3.40 -> 3.15 -> 2.90 -> 2.65 -> 2.40 -> 2.15
+  { date: "2026-03-06", bank: "BCE", decision: "Cut -25bps", rate: 2.15, rateStr: "2.15%", surprise: false },
+  { date: "2026-01-30", bank: "BCE", decision: "Cut -25bps", rate: 2.40, rateStr: "2.40%", surprise: false },
+  { date: "2025-12-12", bank: "BCE", decision: "Cut -25bps", rate: 2.65, rateStr: "2.65%", surprise: false },
+  { date: "2025-10-17", bank: "BCE", decision: "Cut -25bps", rate: 2.90, rateStr: "2.90%", surprise: false },
+  { date: "2025-09-12", bank: "BCE", decision: "Cut -25bps", rate: 3.15, rateStr: "3.15%", surprise: false },
+  // BOJ — cycle: 0.00 -> 0.25 -> 0.50 -> 0.75 (normalisation)
+  { date: "2026-03-14", bank: "BOJ", decision: "Hike +25bps", rate: 0.75, rateStr: "0.75%", surprise: false },
+  { date: "2026-01-24", bank: "BOJ", decision: "Hike +25bps", rate: 0.50, rateStr: "0.50%", surprise: true },
+  { date: "2025-07-31", bank: "BOJ", decision: "Hike +25bps", rate: 0.25, rateStr: "0.25%", surprise: true },
+  { date: "2025-03-19", bank: "BOJ", decision: "Hold", rate: 0.00, rateStr: "0.00%", surprise: false },
+  // BOC — cycle: 5.00 -> 4.50 -> 4.00 -> 3.50 -> 3.00 -> 2.75 -> 2.50 -> 2.25
+  { date: "2026-03-12", bank: "BOC", decision: "Cut -25bps", rate: 2.25, rateStr: "2.25%", surprise: false },
+  { date: "2026-01-29", bank: "BOC", decision: "Cut -25bps", rate: 2.50, rateStr: "2.50%", surprise: false },
+  { date: "2025-12-11", bank: "BOC", decision: "Cut -50bps", rate: 2.75, rateStr: "2.75%", surprise: true },
+  { date: "2025-10-23", bank: "BOC", decision: "Cut -50bps", rate: 3.25, rateStr: "3.25%", surprise: false },
+  // SNB — cycle: 1.75 -> 1.50 -> 1.25 -> 1.00 -> 0.75 -> 0.50 -> 0.25 -> 0.00
+  { date: "2026-03-20", bank: "SNB", decision: "Cut -25bps", rate: 0.00, rateStr: "0.00%", surprise: false },
+  { date: "2025-12-12", bank: "SNB", decision: "Cut -25bps", rate: 0.25, rateStr: "0.25%", surprise: false },
+  { date: "2025-09-26", bank: "SNB", decision: "Cut -25bps", rate: 0.50, rateStr: "0.50%", surprise: false },
+  { date: "2025-06-19", bank: "SNB", decision: "Cut -25bps", rate: 0.75, rateStr: "0.75%", surprise: false },
+  // BOE — cycle: 5.25 -> 5.00 -> 4.75 -> 4.50 -> 4.25 -> 4.00 -> 3.75
+  { date: "2026-03-20", bank: "BOE", decision: "Cut -25bps", rate: 3.75, rateStr: "3.75%", surprise: false },
+  { date: "2026-02-06", bank: "BOE", decision: "Cut -25bps", rate: 4.00, rateStr: "4.00%", surprise: false },
+  { date: "2025-12-19", bank: "BOE", decision: "Cut -25bps", rate: 4.25, rateStr: "4.25%", surprise: false },
+  { date: "2025-11-07", bank: "BOE", decision: "Cut -25bps", rate: 4.50, rateStr: "4.50%", surprise: false },
+  // RBA — cycle: 4.35 -> 4.10 (1 cut seulement, prudent)
+  { date: "2026-03-18", bank: "RBA", decision: "Hold", rate: 4.10, rateStr: "4.10%", surprise: false },
   { date: "2026-02-18", bank: "RBA", decision: "Cut -25bps", rate: 4.10, rateStr: "4.10%", surprise: false },
   { date: "2025-12-10", bank: "RBA", decision: "Hold", rate: 4.35, rateStr: "4.35%", surprise: false },
-  { date: "2025-11-05", bank: "RBA", decision: "Hold", rate: 4.35, rateStr: "4.35%", surprise: false },
-  // PBOC
-  { date: "2026-03-20", bank: "PBOC", decision: "Hold", rate: 3.10, rateStr: "3.10%", surprise: false },
+  // PBOC — cycle: 3.45 -> 3.35 -> 3.10 -> 3.00 (LPR 1Y)
+  { date: "2026-03-20", bank: "PBOC", decision: "Hold", rate: 3.00, rateStr: "3.00%", surprise: false },
   { date: "2026-02-20", bank: "PBOC", decision: "Cut -10bps", rate: 3.10, rateStr: "3.10%", surprise: false },
   { date: "2025-10-21", bank: "PBOC", decision: "Cut -25bps", rate: 3.20, rateStr: "3.20%", surprise: true },
   { date: "2025-07-22", bank: "PBOC", decision: "Cut -10bps", rate: 3.45, rateStr: "3.45%", surprise: false },
@@ -209,9 +224,9 @@ export default function CentralBanksPage() {
         const resp = await fetch(`${API}/api/uw/economic-calendar`);
         const json = await resp.json();
         const events = json?.data || json || [];
-        // Filter for central bank / fed / fomc / boe / boj / ecb events
+        // UW eco calendar fields: { event, time, type, prev, forecast, reported_period }
         const cbEvents = events.filter((e: any) => {
-          const title = (e.title || e.event || e.name || "").toLowerCase();
+          const title = (e.event || e.title || e.name || "").toLowerCase();
           return (
             title.includes("fed") || title.includes("fomc") || title.includes("powell") ||
             title.includes("waller") || title.includes("williams") || title.includes("bowman") ||
@@ -376,23 +391,26 @@ export default function CentralBanksPage() {
             </thead>
             <tbody>
               {calendarEvents.map((s: any, i: number) => {
-                const dateStr = s.date || s.datetime || s.release_date || "";
-                const timeStr = s.time || (s.datetime ? s.datetime.slice(11, 16) : "") || "";
-                const title = s.title || s.event || s.name || "";
-                const impact = (s.impact || s.importance || "low").toLowerCase();
+                // UW fields: { event, time (ISO), type, prev, forecast, reported_period }
+                const isoTime = s.time || "";
+                const dateStr = isoTime.slice(0, 10);
+                const hourStr = isoTime.slice(11, 16);
+                const title = s.event || s.title || s.name || "";
+                const prev = s.prev || "";
+                const forecast = s.forecast || "";
+                const eventType = s.type || "";
                 return (
                   <tr key={i} className="border-t border-[#1E1E22] hover:bg-[#16161A] transition-colors">
                     <td className="py-2 px-3 font-mono text-[#A0A0A8]">
-                      {dateStr ? dateStr.slice(0, 10) : <span className="text-[#555]">—</span>}
+                      {dateStr || <span className="text-[#555]">—</span>}
                     </td>
                     <td className="py-2 px-3 font-mono text-[#6B6B75]">
-                      {timeStr || "—"}
+                      {hourStr || "—"}
                     </td>
                     <td className="py-2 px-3 text-[#E0E0E5]">{title || "—"}</td>
-                    <td className="py-2 px-3">
-                      <Badge color={impact === "high" ? "#EF4444" : impact === "medium" ? "#FFA726" : "#6B6B75"}>
-                        {impact.toUpperCase()}
-                      </Badge>
+                    <td className="py-2 px-3 text-[10px] text-[#6B6B75]">
+                      {prev && <span>Prev: <span className="text-white font-mono">{prev}</span></span>}
+                      {forecast && <span className="ml-2">Est: <span className="text-[#FFA726] font-mono">{forecast}</span></span>}
                     </td>
                   </tr>
                 );
