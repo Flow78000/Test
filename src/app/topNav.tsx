@@ -11,6 +11,7 @@ const SECTIONS = [
       { href: "/flow", label: "Flow" },
       { href: "/greeks", label: "GEX" },
       { href: "/dark-pool", label: "Dark Pool" },
+      { href: "/straddle", label: "Straddle" },
     ],
   },
   { id: "REGIME", label: "REGIME", color: "#B388FF", icon: "◆",
@@ -48,13 +49,14 @@ const SECTIONS = [
   { id: "ACADEMIE", label: "ACADEMIE", color: "#F0F0F0", icon: "",
     pages: [
       { href: "/academie", label: "Modules" },
+      { href: "/academie/cboe-tickers", label: "CBOE Tickers" },
     ],
   },
 ] as const;
 
 function getActiveSection(pathname: string): string {
   if (pathname === "/") return "LIVE";
-  if (["/chain", "/flow", "/greeks", "/dark-pool"].some((p) => pathname.startsWith(p))) return "LIVE";
+  if (["/chain", "/flow", "/greeks", "/dark-pool", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
   if (["/regime", "/signals"].some((p) => pathname.startsWith(p))) return "REGIME";
   if (["/vol-", "/term-", "/surface"].some((p) => pathname.startsWith(p))) return "VOL";
   if (["/heatmap", "/news", "/earnings", "/calendrier", "/central", "/fx-", "/range"].some((p) => pathname.startsWith(p))) return "MACRO";
