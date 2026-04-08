@@ -53,6 +53,7 @@ export default function RootLayout({
               <NavTab href="/vol-cone" label="Cone" />
               <NavTab href="/term-structure" label="TS" />
               <NavTab href="/vol-map" label="Map" />
+              <NavTab href="/surface" label="Surface" />
 
               <span className="w-px h-5 bg-[#1E1E22] mx-1" />
 
