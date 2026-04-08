@@ -90,3 +90,11 @@ def total_options_volume():
 @router.get("/spot-exposures/strike")
 def spot_exposures(ticker: str = "SPY"):
     return uw_fetch(f"/stock/{ticker}/spot-exposures/strike")
+
+@router.get("/stock-info")
+def stock_info(ticker: str = "SPY"):
+    return uw_fetch(f"/stock/{ticker}")
+
+@router.get("/dividend-history")
+def dividend_history(ticker: str = "SPY"):
+    return uw_fetch(f"/stock/{ticker}/dividend-history")
