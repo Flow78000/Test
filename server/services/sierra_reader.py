@@ -24,6 +24,10 @@ SIERRA_ASSETS = {
     "SPXS-NQTV": {"name": "SPDR S&P 500 Bear 3x", "class": "Inverse", "timeframe": "5min"},
     "TICK-NYSE_NASDAQ_NYSEMKT": {"name": "TICK Composite NYSE+NASDAQ", "class": "Breadth", "timeframe": "1min"},
     "SP500GEX": {"name": "SP500 GEX Total Delta", "class": "GEX", "timeframe": "5min"},
+    "SP500GEX-NQ": {"name": "NQ Period OHLC Vol Synth", "class": "GEX", "timeframe": "5min"},
+    "SP500GEX-VXX": {"name": "VXX Vol Synthetique", "class": "Volatilite", "timeframe": "5min"},
+    "SP500GEX-SPXS": {"name": "SPXS Vol Synthetique", "class": "Inverse", "timeframe": "5min"},
+    "SP500GEX-TICK": {"name": "TICK Renko Breadth", "class": "Breadth", "timeframe": "renko"},
 }
 
 # Simple in-module cache

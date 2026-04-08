@@ -13,11 +13,11 @@ SIERRA_DIR = r"C:\SierraChart\Data"
 OUTPUT_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sierra_signal_history.json")
 
 def extract():
-    files = [f for f in os.listdir(SIERRA_DIR) if f.endswith("-BarStudyData.csv")]
+    files = [f for f in os.listdir(SIERRA_DIR) if f.endswith("-BarStudyData.csv") or f.endswith("-BarStudyData.txt") or (f.startswith("SP500GEX-") and f.endswith(".txt"))]
     all_history = {}
 
     for fname in sorted(files):
-        sym = fname.replace("-BarStudyData.csv", "")
+        sym = fname.replace("-BarStudyData.csv", "").replace("-BarStudyData.txt", "").replace(".txt", "")
         path = os.path.join(SIERRA_DIR, fname)
 
         with open(path, "r", encoding="utf-8", errors="replace") as f:
