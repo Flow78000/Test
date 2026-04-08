@@ -10,8 +10,29 @@ import {
 } from "recharts";
 
 const API = "http://localhost:3850";
-const WINDOWS = [5, 10, 21, 42, 63, 126, 252];
-const W_LABELS: Record<number, string> = { 5:"1W", 10:"2W", 21:"1M", 42:"2M", 63:"3M", 126:"6M", 252:"1Y" };
+const TIMEFRAMES: Record<string, { windows: number[]; labels: Record<number,string> }> = {
+  "5min": {
+    windows: [5,10,15,20,30,50,78,156,312,390],
+    labels: {5:"25m",10:"50m",15:"1h15",20:"1h40",30:"2h30",50:"4h",78:"1J",156:"2J",312:"4J",390:"5J"}
+  },
+  "15min": {
+    windows: [4,8,12,16,26,52,78,130,260],
+    labels: {4:"1h",8:"2h",12:"3h",16:"4h",26:"6h30",52:"1J",78:"1.5J",130:"2.5J",260:"5J"}
+  },
+  "1h": {
+    windows: [2,4,7,13,26,39,65,130],
+    labels: {2:"2h",4:"4h",7:"1J",13:"2J",26:"4J",39:"1S",65:"2S",130:"1M"}
+  },
+  "daily": {
+    windows: [3,5,7,10,14,21,30,42,63,90,126,180,252],
+    labels: {3:"3J",5:"1S",7:"7J",10:"2S",14:"2S",21:"1M",30:"30J",42:"6S",63:"3M",90:"90J",126:"6M",180:"9M",252:"1A"}
+  },
+  "weekly": {
+    windows: [2,4,8,13,26,52],
+    labels: {2:"2S",4:"1M",8:"2M",13:"3M",26:"6M",52:"1A"}
+  },
+};
+const DEFAULT_TF = "daily";
 
 function pct(n: number): string { return (n * 100).toFixed(1) + "%"; }
 function pctFmt(n: number): string { return (n * 100).toFixed(1); }
@@ -58,6 +79,7 @@ interface ConeRow {
 export default function VolConePage() {
   const [raw, setRaw] = useState<any[]>([]);
   const [ticker, setTicker] = useState("SPY");
+  const [tf, setTf] = useState(DEFAULT_TF);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -74,6 +96,8 @@ export default function VolConePage() {
 
   const { cone, chartData, currentIV, currentRV, vrp, rvHistory } = useMemo(() => {
     if (!raw.length) return { cone: [] as ConeRow[], chartData: [], currentIV: 0, currentRV: 0, vrp: 0, rvHistory: [] };
+    const WINDOWS = TIMEFRAMES[tf]?.windows || TIMEFRAMES.daily.windows;
+    const W_LABELS = TIMEFRAMES[tf]?.labels || TIMEFRAMES.daily.labels;
 
     const prices = raw.map((d: any) => parseFloat(d.price || d.close || 0)).filter(Boolean);
     const ivArr = raw.map((d: any) => parseFloat(d.implied_volatility || d.iv || 0)).filter(Boolean);
@@ -138,7 +162,7 @@ export default function VolConePage() {
 
     const rv21 = cone.find(c => c.window === "1M")?.current ?? latestRV;
     return { cone, chartData, currentIV: latestIV, currentRV: rv21, vrp: latestIV - rv21, rvHistory };
-  }, [raw]);
+  }, [raw, tf]);
 
   const vrpColor = vrp > 0.03 ? "#22C55E" : vrp > 0 ? "#FFA726" : "#EF4444";
   const vrpEdge = vrp > 0.05 ? "EDGE FORT — Vente de vol optimale" : vrp > 0.02 ? "EDGE MODERE — Vente de vol possible" : vrp > 0 ? "EDGE FAIBLE — Prudence" : "PAS D'EDGE — Ne pas vendre de vol";
@@ -165,6 +189,13 @@ export default function VolConePage() {
           <option value="SPY">SPY</option>
           <option value="QQQ">QQQ</option>
           <option value="IWM">IWM</option>
+        </select>
+        <select value={tf} onChange={e => setTf(e.target.value)} className="text-xs">
+          <option value="5min">5 Minutes</option>
+          <option value="15min">15 Minutes</option>
+          <option value="1h">1 Heure</option>
+          <option value="daily">Journalier</option>
+          <option value="weekly">Hebdomadaire</option>
         </select>
         <button onClick={load} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">Rafraichir</button>
         <LiveBadge />
