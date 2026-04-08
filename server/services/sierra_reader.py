@@ -23,6 +23,7 @@ SIERRA_ASSETS = {
     "VXX-NQTV": {"name": "VXX Short-Term VIX ETN", "class": "Volatilite", "timeframe": "5min"},
     "SPXS-NQTV": {"name": "SPDR S&P 500 Bear 3x", "class": "Inverse", "timeframe": "5min"},
     "TICK-NYSE_NASDAQ_NYSEMKT": {"name": "TICK Composite NYSE+NASDAQ", "class": "Breadth", "timeframe": "1min"},
+    "SP500GEX": {"name": "SP500 GEX Total Delta", "class": "GEX", "timeframe": "5min"},
 }
 
 # Simple in-module cache
@@ -48,8 +49,8 @@ def sierra_scan_files():
     if not os.path.exists(SIERRA_DATA_DIR):
         return found
     for f in os.listdir(SIERRA_DATA_DIR):
-        if f.endswith("-BarStudyData.csv"):
-            symbol = f.replace("-BarStudyData.csv", "")
+        if f.endswith("-BarStudyData.csv") or f.endswith("-BarStudyData.txt"):
+            symbol = f.replace("-BarStudyData.csv", "").replace("-BarStudyData.txt", "")
             path = os.path.join(SIERRA_DATA_DIR, f)
             size = os.path.getsize(path)
             mtime = os.path.getmtime(path)
@@ -69,9 +70,11 @@ def sierra_get_csv_path(symbol=None):
     """Get CSV path for a symbol, default to USEquities"""
     if not symbol:
         symbol = "USEquities"
-    path = os.path.join(SIERRA_DATA_DIR, f"{symbol}-BarStudyData.csv")
-    if os.path.exists(path):
-        return path
+    # Check both .csv and .txt extensions
+    for ext in [".csv", ".txt"]:
+        path = os.path.join(SIERRA_DATA_DIR, f"{symbol}-BarStudyData{ext}")
+        if os.path.exists(path):
+            return path
     return None
 
 
