@@ -101,7 +101,7 @@ export default function RangeDashboardPage() {
     const g: Record<string, { sym: string; data: AssetRange }[]> = {};
     Object.entries(assets).forEach(([sym, data]) => {
       const cls = data.asset_class || "Autre";
-      if (!groups[cls]) g[cls] = [];
+      if (!g[cls]) g[cls] = [];
       g[cls]!.push({ sym, data });
     });
     return g;
