@@ -62,66 +62,77 @@ def performance_all():
 
 @router.get("/daily-ranges")
 def daily_ranges(days: int = 10):
-    """Compute daily OHLC ranges from all Sierra CSV files"""
+    """Compute daily OHLC ranges from all Sierra CSV files.
+    Reads Date(col0), Open(col2), High(col3), Low(col4), Last(col5) by INDEX
+    to avoid duplicate column name issues."""
+    from services.sierra_reader import sierra_scan_files, sierra_get_csv_path
     files = sierra_scan_files()
     result = {}
     for sym in files:
-        hist = sierra_read_history(bars=2000, symbol=sym)
-        if "error" in hist:
+        csv_path = sierra_get_csv_path(sym)
+        if not csv_path:
             continue
-        rows = hist.get("history", [])
-        if not rows:
+        try:
+            with open(csv_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            if len(lines) < 2:
+                continue
+            # Use fixed column indices: 0=Date, 1=Time, 2=Open, 3=High, 4=Low, 5=Last
+            daily = {}
+            for line in lines[-3000:]:  # Last 3000 bars max
+                cols = [c.strip() for c in line.split(",")]
+                if len(cols) < 6:
+                    continue
+                date = cols[0].strip()
+                if not date or date == "Date":
+                    continue
+                try:
+                    o = float(cols[2])
+                    h = float(cols[3])
+                    l = float(cols[4])
+                    c = float(cols[5])
+                except (ValueError, IndexError):
+                    continue
+                if c <= 0:
+                    continue  # Skip invalid prices
+                if date not in daily:
+                    daily[date] = {"open": o, "high": h, "low": l, "close": c}
+                else:
+                    d = daily[date]
+                    if h > d["high"]: d["high"] = h
+                    if l < d["low"]: d["low"] = l
+                    d["close"] = c
+            # Take last N days
+            sorted_days = sorted(daily.keys())[-days:]
+            ranges = []
+            prev_close = None
+            for dt in sorted_days:
+                d = daily[dt]
+                range_pts = round(d["high"] - d["low"], 4)
+                range_pct = round(range_pts / d["close"] * 100, 4) if d["close"] else 0
+                rv_daily = round(abs(d["close"] - prev_close) / prev_close * 100, 4) if prev_close and prev_close != 0 else None
+                change_pct = round((d["close"] - prev_close) / prev_close * 100, 4) if prev_close and prev_close != 0 else None
+                ranges.append({
+                    "date": dt,
+                    "open": round(d["open"], 4),
+                    "high": round(d["high"], 4),
+                    "low": round(d["low"], 4),
+                    "close": round(d["close"], 4),
+                    "range_pts": range_pts,
+                    "range_pct": range_pct,
+                    "rv_daily": rv_daily,
+                    "change_pct": change_pct,
+                })
+                prev_close = d["close"]
+            meta = files[sym]
+            result[sym] = {
+                "name": meta["name"],
+                "asset_class": meta["asset_class"],
+                "days": ranges,
+                "latest": ranges[-1] if ranges else None,
+            }
+        except Exception:
             continue
-        # Aggregate by date
-        daily = {}
-        for r in rows:
-            date = str(r.get("Date", ""))
-            if not date or date == "Date":
-                continue
-            o = r.get(" Open", r.get("Open"))
-            h = r.get(" High", r.get("High"))
-            l = r.get(" Low", r.get("Low"))
-            c = r.get(" Last", r.get("Last"))
-            try:
-                o, h, l, c = float(o), float(h), float(l), float(c)
-            except (TypeError, ValueError):
-                continue
-            if date not in daily:
-                daily[date] = {"open": o, "high": h, "low": l, "close": c}
-            else:
-                d = daily[date]
-                if h > d["high"]: d["high"] = h
-                if l < d["low"]: d["low"] = l
-                d["close"] = c
-        # Take last N days
-        sorted_days = sorted(daily.keys())[-days:]
-        ranges = []
-        prev_close = None
-        for dt in sorted_days:
-            d = daily[dt]
-            range_pts = round(d["high"] - d["low"], 4)
-            range_pct = round(range_pts / d["close"] * 100, 4) if d["close"] else 0
-            rv_daily = round(abs(d["close"] - prev_close) / prev_close * 100, 4) if prev_close and prev_close != 0 else None
-            change_pct = round((d["close"] - prev_close) / prev_close * 100, 4) if prev_close and prev_close != 0 else None
-            ranges.append({
-                "date": dt,
-                "open": round(d["open"], 4),
-                "high": round(d["high"], 4),
-                "low": round(d["low"], 4),
-                "close": round(d["close"], 4),
-                "range_pts": range_pts,
-                "range_pct": range_pct,
-                "rv_daily": rv_daily,
-                "change_pct": change_pct,
-            })
-            prev_close = d["close"]
-        meta = files[sym]
-        result[sym] = {
-            "name": meta["name"],
-            "asset_class": meta["asset_class"],
-            "days": ranges,
-            "latest": ranges[-1] if ranges else None,
-        }
     return {"assets": result, "asset_count": len(result)}
 
 @router.get("/gex-analysis")

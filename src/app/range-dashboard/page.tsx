@@ -165,11 +165,10 @@ export default function RangeDashboardPage() {
                 ))}
               </tr>
             </thead>
-            <tbody>
               {Object.entries(groups).map(([cls, items]) => (
-                <>
+                <tbody key={cls}>
                   {/* Class header */}
-                  <tr key={`hdr-${cls}`}>
+                  <tr>
                     <td colSpan={allDates.length + 1}
                       className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[2px] border-b border-[#1E1E22]"
                       style={{ color: CLASS_COLORS[cls] || "#6B6B75", backgroundColor: `${CLASS_COLORS[cls] || "#6B6B75"}15` }}>
@@ -214,9 +213,8 @@ export default function RangeDashboardPage() {
                       </tr>
                     );
                   })}
-                </>
+                </tbody>
               ))}
-            </tbody>
             {/* Date footer */}
             <tfoot>
               <tr>
