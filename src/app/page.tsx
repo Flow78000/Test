@@ -1,128 +1,235 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Card, KpiCard, Badge, LiveBadge } from "@/components/ui/card";
+import { SkeletonGrid, ErrorCard } from "@/components/ui/skeleton";
+import { fmtPremium, fmtK, timeAgo, regimeFromIV, fmtPrice, fmtPct } from "@/lib/format";
 
 const API = "http://localhost:3850";
 
-export default function Dashboard() {
-  const [vix, setVix] = useState<any>(null);
-  const [connected, setConnected] = useState(false);
-  const [loading, setLoading] = useState(true);
+interface DashData {
+  iv: number; ivRank: number; spyPrice: number;
+  regime: { label: string; color: string; advice: string };
+  dpss: any; gex: any; flowScore: any;
+  darkPools: any[]; flowAlerts: any[]; tide: any;
+  signals: any[]; sectors: any[];
+}
 
-  useEffect(() => {
-    async function load() {
-      try {
-        // Try backend first
-        const healthResp = await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(3000) });
-        if (healthResp.ok) {
-          setConnected(true);
-          // Fetch IV data
-          const ivResp = await fetch(`${API}/api/uw/iv-rank?ticker=SPY`);
-          if (ivResp.ok) {
-            const ivJson = await ivResp.json();
-            const data = ivJson?.data || ivJson;
-            if (Array.isArray(data) && data.length > 0) {
-              const latest = data[data.length - 1];
-              setVix({
-                iv: (parseFloat(latest.volatility || 0) * 100).toFixed(1),
-                ivRank: parseFloat(latest.iv_rank_1y || 0).toFixed(1),
-                price: parseFloat(latest.close || 0).toFixed(2),
-              });
-            }
-          }
-        }
-      } catch {
-        setConnected(false);
-      }
-      setLoading(false);
-    }
-    load();
-    const i = setInterval(load, 60000);
-    return () => clearInterval(i);
+async function fetchJson(path: string) {
+  const r = await fetch(`${API}${path}`, { signal: AbortSignal.timeout(4000) });
+  if (!r.ok) return null;
+  return r.json();
+}
+
+async function loadAll(): Promise<DashData | null> {
+  try {
+    const [ivRes, regimeRes, flowRes, tideRes, sectorRes, sierraRes] = await Promise.allSettled([
+      fetchJson("/api/uw/iv-rank?ticker=SPY"),
+      fetchJson("/api/regime/full"),
+      fetchJson("/api/uw/flow-alerts"),
+      fetchJson("/api/uw/market-tide"),
+      fetchJson("/api/uw/sector-etfs"),
+      fetchJson("/api/sierra/dashboard"),
+    ]);
+    const iv = ivRes.status === "fulfilled" ? ivRes.value : null;
+    const reg = regimeRes.status === "fulfilled" ? regimeRes.value : null;
+    const flow = flowRes.status === "fulfilled" ? flowRes.value : null;
+    const tide = tideRes.status === "fulfilled" ? tideRes.value : null;
+    const sect = sectorRes.status === "fulfilled" ? sectorRes.value : null;
+    const sierra = sierraRes.status === "fulfilled" ? sierraRes.value : null;
+
+    const ivArr = Array.isArray(iv?.data) ? iv.data : Array.isArray(iv) ? iv : [];
+    const latest = ivArr[ivArr.length - 1];
+    const ivVal = latest ? parseFloat(latest.volatility || 0) * 100 : 0;
+    const ivRank = latest ? parseFloat(latest.iv_rank_1y || 0) : 0;
+    const spyPrice = latest ? parseFloat(latest.close || 0) : 0;
+
+    return {
+      iv: ivVal, ivRank, spyPrice,
+      regime: regimeFromIV(ivVal),
+      dpss: reg?.dpss || null,
+      gex: reg?.gex || null,
+      flowScore: reg?.flow || null,
+      darkPools: (flow?.data || flow || []).slice(0, 5),
+      flowAlerts: (flow?.data || flow || []).slice(0, 3),
+      tide: tide?.data || tide || null,
+      signals: (sierra?.data || sierra?.signals || []).slice(0, 5),
+      sectors: (sect?.data || sect || []).slice(0, 5),
+    };
+  } catch { return null; }
+}
+
+export default function Dashboard() {
+  const [data, setData] = useState<DashData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const d = await loadAll();
+    if (d) { setData(d); setError(false); } else { setError(true); }
+    setLoading(false);
   }, []);
 
-  const ivVal = vix ? parseFloat(vix.iv) : 0;
-  const regime = ivVal > 35 ? "CRISE" : ivVal > 25 ? "STRESS" : ivVal > 18 ? "TRANSITION" : ivVal > 0 ? "CALME" : null;
-  const regimeColor = regime === "CRISE" ? "#FF1744" : regime === "STRESS" ? "#EF4444" : regime === "TRANSITION" ? "#FFA726" : regime === "CALME" ? "#22C55E" : "#6B6B75";
+  useEffect(() => {
+    refresh();
+    const i = setInterval(refresh, 30000);
+    return () => clearInterval(i);
+  }, [refresh]);
+
+  if (loading) return <div className="p-6"><SkeletonGrid cols={6} /><SkeletonGrid cols={3} /></div>;
+  if (error || !data) return <div className="p-6"><ErrorCard onRetry={refresh} /></div>;
+
+  const { regime } = data;
+  const bullPct = data.tide?.bull_pct ?? 55;
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <h1 className="text-2xl font-extrabold">
-          FLO<span className="text-[#FF6B00] text-3xl font-black">.</span><span className="text-[#FF6B00]">W</span>
-          <span className="text-[#6B6B75] text-lg font-normal ml-3">Dashboard</span>
-        </h1>
-        <div className="ml-auto flex items-center gap-3">
-          <span className={`flex items-center gap-2 text-xs ${connected ? "text-[#22C55E]" : "text-[#EF4444]"}`}>
-            <span className={`w-2 h-2 rounded-full ${connected ? "bg-[#22C55E] animate-pulse" : "bg-[#EF4444]"}`} />
-            {connected ? "Backend Connecte" : "Backend Hors Ligne"}
-          </span>
+    <div className="p-4 space-y-4">
+      {/* Row 1 — KPI Ticker Bar */}
+      <div className="h-8 flex items-center gap-4 px-3 bg-[#111114] border border-[#1E1E22] rounded-lg overflow-x-auto">
+        <Chip label="VIX" value={data.iv.toFixed(1)} color={data.iv > 25 ? "#EF4444" : "#22C55E"} />
+        <Chip label="IV Rank" value={fmtPct(data.ivRank)} color="#FF6B00" />
+        <Chip label="SKEW" value="--" color="#6B6B75" />
+        <Chip label="VVIX" value="--" color="#6B6B75" />
+        <Chip label="SPY" value={fmtPrice(data.spyPrice)} color="#F0F0F0" />
+        <Chip label="QQQ" value="--" color="#F0F0F0" />
+        <div className="ml-auto"><LiveBadge /></div>
+      </div>
+
+      {/* Row 2 — Main Grid */}
+      <div className="grid grid-cols-12 gap-4">
+        {/* Left Column */}
+        <div className="col-span-4 space-y-3">
+          <Card className="p-5 text-center" style={{ background: `${regime.color}08`, borderColor: `${regime.color}44` }}>
+            <div className="text-3xl font-black tracking-wider" style={{ color: regime.color }}>{regime.label}</div>
+            <div className="text-xs mt-2" style={{ color: regime.color }}>{regime.advice}</div>
+          </Card>
+          <MiniCard title="DPSS" value={data.dpss?.value ?? "--"} signal={data.dpss?.signal} />
+          <MiniCard title="Net GEX" value={data.gex?.net ? fmtK(data.gex.net) : "--"} signal={data.gex?.gamma_mode} />
+          <MiniCard title="Flow Score" value={data.flowScore?.value ?? "--"} signal={data.flowScore?.signal} />
+          <Card className="p-3 flex items-center justify-center gap-2">
+            <span className="text-[10px] text-[#6B6B75] uppercase">Confiance</span>
+            {[data.dpss?.signal, data.gex?.gamma_mode, data.flowScore?.signal].map((s, i) => (
+              <span key={i} className={`w-2.5 h-2.5 rounded-full ${s ? "bg-[#22C55E]" : "bg-[#2A2A30]"}`} />
+            ))}
+          </Card>
+        </div>
+
+        {/* Center Column */}
+        <div className="col-span-5 space-y-3">
+          <div className="text-xs text-[#6B6B75] uppercase tracking-widest font-semibold">Market Pulse</div>
+          <Card className="overflow-hidden">
+            <div className="px-3 py-2 border-b border-[#1E1E22] text-[10px] text-[#6B6B75] uppercase">Dark Pool Prints</div>
+            <div className="divide-y divide-[#1E1E22]">
+              {data.darkPools.length ? data.darkPools.map((d, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-[11px]">
+                  <span className="text-[#6B6B75] w-12">{d.time ? timeAgo(d.time) : "--"}</span>
+                  <span className="font-bold w-10">{d.ticker || "--"}</span>
+                  <span className="text-[#F0F0F0] flex-1">{d.size ? fmtK(d.size) : "--"}</span>
+                  <span>{d.premium ? fmtPremium(d.premium) : "--"}</span>
+                  <Badge color={d.side === "BUY" ? "#22C55E" : "#EF4444"}>{d.side || "?"}</Badge>
+                </div>
+              )) : <div className="p-3 text-[11px] text-[#6B6B75]">Aucun print</div>}
+            </div>
+          </Card>
+          <Card className="overflow-hidden">
+            <div className="px-3 py-2 border-b border-[#1E1E22] text-[10px] text-[#6B6B75] uppercase">Flow Alerts</div>
+            <div className="divide-y divide-[#1E1E22]">
+              {data.flowAlerts.length ? data.flowAlerts.map((a, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-[11px]">
+                  <Badge color={a.type === "CALL" ? "#22C55E" : "#EF4444"}>{a.type || "?"}</Badge>
+                  <span className="font-bold">{a.ticker || "--"}</span>
+                  <span className="text-[#6B6B75] flex-1">{a.premium ? fmtPremium(a.premium) : "--"}</span>
+                </div>
+              )) : <div className="p-3 text-[11px] text-[#6B6B75]">Aucune alerte</div>}
+            </div>
+          </Card>
+          <Card className="p-3">
+            <div className="text-[10px] text-[#6B6B75] uppercase mb-2">Market Tide</div>
+            <div className="flex h-3 rounded-full overflow-hidden bg-[#1E1E22]">
+              <div className="bg-[#22C55E] transition-all" style={{ width: `${bullPct}%` }} />
+              <div className="bg-[#EF4444] flex-1" />
+            </div>
+            <div className="flex justify-between text-[10px] mt-1">
+              <span className="text-[#22C55E]">Calls {bullPct}%</span>
+              <span className="text-[#EF4444]">Puts {100 - bullPct}%</span>
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Column */}
+        <div className="col-span-3 space-y-3">
+          <div className="text-xs text-[#6B6B75] uppercase tracking-widest font-semibold">Signaux Actifs</div>
+          <Card className="overflow-hidden">
+            <div className="divide-y divide-[#1E1E22]">
+              {data.signals.length ? data.signals.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-[11px]">
+                  <span className="text-[#6B6B75] w-10">{s.time ? timeAgo(s.time) : "--"}</span>
+                  <span className="font-bold w-8">{s.symbol || "--"}</span>
+                  <Badge color={s.direction === "LONG" ? "#22C55E" : "#EF4444"}>{s.direction || "?"}</Badge>
+                  <span className="text-[#6B6B75] flex-1 text-right">{s.level ?? "--"}</span>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3].map((d) => (
+                      <span key={d} className={`w-1.5 h-1.5 rounded-full ${(s.strength || 0) >= d ? "bg-[#FF6B00]" : "bg-[#2A2A30]"}`} />
+                    ))}
+                  </div>
+                </div>
+              )) : <div className="p-3 text-[11px] text-[#6B6B75]">Aucun signal</div>}
+            </div>
+          </Card>
+          <Card className="p-3 text-center">
+            <div className="text-[10px] text-[#6B6B75] uppercase mb-1">Rotation Sectorielle</div>
+            <Badge color={data.iv < 20 ? "#22C55E" : "#EF4444"}>
+              {data.iv < 20 ? "RISK ON" : "RISK OFF"}
+            </Badge>
+          </Card>
+          <Card className="p-3 text-center">
+            <div className="text-[10px] text-[#6B6B75] uppercase mb-1">Prochain Earnings</div>
+            <div className="text-sm font-bold text-[#F0F0F0]">--</div>
+            <div className="text-[10px] text-[#6B6B75]">Aucun resultat prevu</div>
+          </Card>
         </div>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <KpiCard label="IV SPY" value={vix?.iv || "--"} sublabel="Volatilite Implicite" color={ivVal > 25 ? "#EF4444" : ivVal > 18 ? "#FFA726" : "#22C55E"} />
-        <KpiCard label="IV Rank 1Y" value={vix?.ivRank ? vix.ivRank + "%" : "--"} sublabel="Percentile Annuel" color="#FF6B00" />
-        <KpiCard label="SPY Close" value={vix?.price ? "$" + vix.price : "--"} sublabel="Dernier Prix" color="#F0F0F0" />
-        <KpiCard label="Regime" value={regime || "--"} sublabel={regime ? `IV = ${vix?.iv}%` : "En attente"} color={regimeColor} />
-      </div>
-
-      {/* Regime Badge */}
-      {regime ? (
-        <div className="rounded-xl p-8 text-center mb-6" style={{ background: `${regimeColor}08`, border: `1px solid ${regimeColor}33` }}>
-          <div className="text-5xl font-black tracking-wider mb-2" style={{ color: regimeColor }}>{regime}</div>
-          <div className="text-lg font-semibold" style={{ color: regimeColor }}>
-            {regime === "CALME" && "Conditions stables — Vente de vol, positions directionnelles"}
-            {regime === "TRANSITION" && "Prudence — Reduire taille, elargir stops"}
-            {regime === "STRESS" && "Credit spreads OTM — Ne pas acheter en directionnel"}
-            {regime === "CRISE" && "Protection maximale — Cash, BTAL, puts deep OTM"}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-[#111114] border border-[#1E1E22] rounded-xl p-8 text-center mb-6">
-          {loading ? (
-            <div className="text-xl text-[#6B6B75]">Connexion au serveur...</div>
-          ) : (
-            <>
-              <div className="text-3xl font-black tracking-wider text-[#6B6B75] mb-2">BACKEND REQUIS</div>
-              <div className="text-sm text-[#6B6B75] mb-4">Lancez le serveur FastAPI pour activer les donnees live</div>
-              <div className="text-sm text-[#6B6B75] font-mono bg-[#08080A] rounded-lg p-4 inline-block">
-                cd D:\flo-w\server && python main.py
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Quick Links */}
-      <div className="grid grid-cols-3 gap-4">
-        <QuickLink href="/chain" title="Vol Chain" desc="Options chain institutionnelle — GEX, Vanna, Greeks par strike" />
-        <QuickLink href="/regime" title="Regime Engine" desc="DPSS + GEX + Flow Score — 4 regimes de marche" />
-        <QuickLink href="/signals" title="Signaux Sierra" desc="Mean reversion, vol synthetique — 12 actifs" />
-        <QuickLink href="/greeks" title="GEX / Vanna / Charm" desc="Exposition Greeks par strike — SPX, SPY, QQQ" />
-        <QuickLink href="/heatmap" title="Heatmap Secteurs" desc="Rotation sectorielle — 11 SPDR sectors avec flow" />
-        <QuickLink href="/academie" title="Academie" desc="10 modules — Volatilite, RV Spreads, Taux, Commodities" />
+      {/* Row 3 — Quick Links */}
+      <div className="grid grid-cols-6 gap-3">
+        {[
+          { href: "/chain", title: "Chain", desc: "Options chain institutionnelle" },
+          { href: "/regime", title: "Regime", desc: "DPSS + GEX + Flow Score" },
+          { href: "/greeks", title: "Greeks", desc: "GEX, Vanna, Charm par strike" },
+          { href: "/dark-pool", title: "Dark Pool", desc: "Mega prints & whale trades" },
+          { href: "/heatmap", title: "Heatmap", desc: "Rotation sectorielle 11 SPDR" },
+          { href: "/academie", title: "Academie", desc: "10 modules volatilite & taux" },
+        ].map((l) => (
+          <Link key={l.href} href={l.href}>
+            <Card hover className="p-4">
+              <div className="text-sm font-bold">{l.title}</div>
+              <div className="text-[10px] text-[#6B6B75] mt-1">{l.desc}</div>
+            </Card>
+          </Link>
+        ))}
       </div>
     </div>
   );
 }
 
-function KpiCard({ label, value, sublabel, color = "#FF6B00" }: { label: string; value: string; sublabel: string; color?: string }) {
+function Chip({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-[#111114] border border-[#1E1E22] rounded-xl p-4 text-center">
-      <div className="text-[10px] text-[#6B6B75] uppercase tracking-widest mb-1">{label}</div>
-      <div className="text-2xl font-extrabold font-mono" style={{ color }}>{value}</div>
-      <div className="text-[10px] text-[#6B6B75] mt-1">{sublabel}</div>
+    <div className="flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-[9px] text-[#6B6B75] uppercase">{label}</span>
+      <span className="text-[11px] font-bold font-mono" style={{ color }}>{value}</span>
     </div>
   );
 }
 
-function QuickLink({ href, title, desc }: { href: string; title: string; desc: string }) {
+function MiniCard({ title, value, signal }: { title: string; value: string | number; signal?: string | null }) {
   return (
-    <a href={href} className="bg-[#111114] border border-[#1E1E22] rounded-xl p-5 hover:border-[#FF6B00] hover:bg-[#16161A] transition-all group">
-      <div className="text-base font-bold group-hover:text-[#FF6B00] transition-colors">{title}</div>
-      <div className="text-xs text-[#6B6B75] mt-2 leading-relaxed">{desc}</div>
-    </a>
+    <Card className="p-3 flex items-center justify-between">
+      <div>
+        <div className="text-[9px] text-[#6B6B75] uppercase">{title}</div>
+        <div className="text-lg font-extrabold font-mono text-[#F0F0F0]">{value}</div>
+      </div>
+      {signal && <Badge color="#FF6B00">{signal}</Badge>}
+    </Card>
   );
 }
