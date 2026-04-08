@@ -24,7 +24,7 @@ export default function RootLayout({
           {/* Top Navigation Bar */}
           <nav className="bg-[#111114] border-b border-[#1E1E22] flex-shrink-0">
             {/* Row 1: Logo + Main tabs */}
-            <div className="flex items-center gap-0 px-5 h-14">
+            <div className="flex items-center gap-0.5 px-5 h-16">
               {/* Logo */}
               <a href="/" className="flex items-center gap-1 pr-6 border-r border-[#1E1E22] mr-2">
                 <span className="text-base font-extrabold tracking-tight">
@@ -78,7 +78,7 @@ function NavTab({ href, label, badge }: { href: string; label: string; badge?: s
   return (
     <a
       href={href}
-      className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium text-[#6B6B75] hover:text-[#F0F0F0] hover:bg-[#1A1A1E] transition-colors rounded whitespace-nowrap"
+      className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-medium text-[#6B6B75] hover:text-[#F0F0F0] hover:bg-[#1A1A1E] transition-colors rounded whitespace-nowrap"
     >
       <span>{label}</span>
       {badge && (
