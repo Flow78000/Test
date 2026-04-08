@@ -60,6 +60,70 @@ def performance_all():
         all_perf[sym] = sierra_performance(sym)
     return {"assets": all_perf, "asset_count": len(all_perf)}
 
+@router.get("/daily-ranges")
+def daily_ranges(days: int = 10):
+    """Compute daily OHLC ranges from all Sierra CSV files"""
+    files = sierra_scan_files()
+    result = {}
+    for sym in files:
+        hist = sierra_read_history(bars=2000, symbol=sym)
+        if "error" in hist:
+            continue
+        rows = hist.get("history", [])
+        if not rows:
+            continue
+        # Aggregate by date
+        daily = {}
+        for r in rows:
+            date = str(r.get("Date", ""))
+            if not date or date == "Date":
+                continue
+            o = r.get(" Open", r.get("Open"))
+            h = r.get(" High", r.get("High"))
+            l = r.get(" Low", r.get("Low"))
+            c = r.get(" Last", r.get("Last"))
+            try:
+                o, h, l, c = float(o), float(h), float(l), float(c)
+            except (TypeError, ValueError):
+                continue
+            if date not in daily:
+                daily[date] = {"open": o, "high": h, "low": l, "close": c}
+            else:
+                d = daily[date]
+                if h > d["high"]: d["high"] = h
+                if l < d["low"]: d["low"] = l
+                d["close"] = c
+        # Take last N days
+        sorted_days = sorted(daily.keys())[-days:]
+        ranges = []
+        prev_close = None
+        for dt in sorted_days:
+            d = daily[dt]
+            range_pts = round(d["high"] - d["low"], 4)
+            range_pct = round(range_pts / d["close"] * 100, 4) if d["close"] else 0
+            rv_daily = round(abs(d["close"] - prev_close) / prev_close * 100, 4) if prev_close and prev_close != 0 else None
+            change_pct = round((d["close"] - prev_close) / prev_close * 100, 4) if prev_close and prev_close != 0 else None
+            ranges.append({
+                "date": dt,
+                "open": round(d["open"], 4),
+                "high": round(d["high"], 4),
+                "low": round(d["low"], 4),
+                "close": round(d["close"], 4),
+                "range_pts": range_pts,
+                "range_pct": range_pct,
+                "rv_daily": rv_daily,
+                "change_pct": change_pct,
+            })
+            prev_close = d["close"]
+        meta = files[sym]
+        result[sym] = {
+            "name": meta["name"],
+            "asset_class": meta["asset_class"],
+            "days": ranges,
+            "latest": ranges[-1] if ranges else None,
+        }
+    return {"assets": result, "asset_count": len(result)}
+
 @router.get("/gex-analysis")
 def gex_analysis(bars: int = 5000):
     """Analyse Total GEX crossings, distribution, and time series from SP500GEX"""
