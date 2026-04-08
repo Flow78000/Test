@@ -1,6 +1,7 @@
 """TWS Market Data — readonly, no personal data"""
 from fastapi import APIRouter, Query
 from services.tws import fetch_quotes, compute_regime, WATCHLIST_VOL, WATCHLIST_FX, qualified, ib_connected, ib
+from services.dividend_cache import fetch_dividends_batch, get_all_cached, get_cached_dividend
 from services.vol_desk_collector import (
     collect_vol_desk_snapshot, save_snapshot,
     get_history, get_ticker_history, get_latest_snapshot, get_sector_summary,
@@ -74,6 +75,23 @@ def vol_desk_ticker(symbol: str = "XLK", days: int = 90):
 def vol_desk_sectors(days: int = 30):
     """Get sector ETF IV/HV evolution summary"""
     return get_sector_summary(days)
+
+@router.get("/dividends")
+def dividends(tickers: str = ""):
+    """Fetch dividend data for a comma-separated list of tickers.
+    Uses TWS if connected, otherwise returns cached data."""
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()] if tickers else []
+    if not ticker_list:
+        return get_all_cached()
+    if ib_connected and ib and ib.isConnected():
+        return fetch_dividends_batch(ib, ticker_list)
+    # Return cached only
+    result = {}
+    for t in ticker_list:
+        cached = get_cached_dividend(t)
+        if cached:
+            result[t] = cached
+    return result
 
 @router.get("/vol-desk/universe")
 def vol_desk_universe():

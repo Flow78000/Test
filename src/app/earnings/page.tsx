@@ -205,7 +205,7 @@ export default function EarningsPage() {
           has_options: e.has_options !== false, // Default true for most listed stocks
           div_yield: e.div_yield ? parseFloat(e.div_yield) : undefined,
           div_ex_date: e.ex_date || e.div_ex_date || undefined,
-          price: e.last_price ? parseFloat(e.last_price) : (e.close ? parseFloat(e.close) : undefined),
+          price: e.pre_earnings_close ? parseFloat(e.pre_earnings_close) : (e.last_price ? parseFloat(e.last_price) : (e.close ? parseFloat(e.close) : undefined)),
         };
       };
 
@@ -224,8 +224,38 @@ export default function EarningsPage() {
       ]);
 
       await Promise.all(fetches);
-      setPre(allPre);
-      setPost(allPost);
+
+      // Fetch dividend data from TWS for all tickers
+      const allTickers = [...new Set([...allPre, ...allPost].map(e => e.ticker).filter(Boolean))];
+      if (allTickers.length > 0) {
+        try {
+          const divRes = await fetch(`${API}/api/market/dividends?tickers=${allTickers.join(",")}`).then(r => r.json());
+          if (divRes && typeof divRes === "object") {
+            const enrichWithDiv = (earning: Earning): Earning => {
+              const div = divRes[earning.ticker];
+              if (div) {
+                return {
+                  ...earning,
+                  div_yield: div.div_yield ?? earning.div_yield,
+                  has_options: div.has_options ?? earning.has_options,
+                  price: div.price ?? earning.price,
+                };
+              }
+              return earning;
+            };
+            allPre.forEach((e, i) => { allPre[i] = enrichWithDiv(e); });
+            allPost.forEach((e, i) => { allPost[i] = enrichWithDiv(e); });
+          }
+        } catch { /* TWS may not be connected — continue without div data */ }
+      }
+
+      // Also use pre_earnings_close as price if available from UW
+      allPre.forEach((e, i) => {
+        if (!e.price) allPre[i] = { ...e, price: undefined };
+      });
+
+      setPre([...allPre]);
+      setPost([...allPost]);
     } catch (e: any) { setError(e.message || "Serveur indisponible"); }
     setLoading(false);
   }, [weekDays]);
