@@ -723,9 +723,11 @@ def sierra_gex_analysis(bars=5000):
         time_series = []
         for i in range(0, len(parsed), step):
             p = parsed[i]
+            raw_time = str(p.get("time", ""))
+            short_time = raw_time[:5] if len(raw_time) >= 5 else raw_time  # "20:24" from "20:24:00.000000"
             time_series.append({
                 "date": p["date"],
-                "time": p["time"],
+                "time": short_time,
                 "total_gex": p.get("Total GEX"),
                 "total_delta": p.get("Total Delta"),
                 "call_gex": p.get("Call GEX"),
