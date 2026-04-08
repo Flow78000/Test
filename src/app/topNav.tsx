@@ -44,7 +44,7 @@ const SECTIONS = [
   { id: "OUTILS", label: "OUTILS", color: "#6B6B75", icon: "⚙",
     pages: [
       { href: "/spread-calc", label: "Calculateur" },
-      { href: "/pnl-sim", label: "P&L Sim" },
+      { href: "/pnl-sim", label: "Option Lab" },
     ],
   },
   { id: "ACADEMIE", label: "ACADEMIE", color: "#F0F0F0", icon: "",
