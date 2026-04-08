@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Card, PageHeader } from "@/components/ui/card";
+import {
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from "recharts";
 import tickerData from "@/data/cboe-tickers.json";
+
+const API = "http://localhost:3850";
 
 /* ── Types ── */
 interface Ticker {
@@ -14,6 +19,154 @@ interface Ticker {
 }
 
 const TICKERS: Ticker[] = tickerData as Ticker[];
+
+/* ── Ticker Chart Component ── */
+function TickerVisual({ symbol, cats }: { symbol: string; cats: string[] }) {
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Determine the best ticker to query (strip _CGI, map indices)
+  const queryTicker = useMemo(() => {
+    const s = symbol.replace(/_CGI$/, "");
+    // VIX family — query directly
+    if (["VIX", "VIX9D", "VIX3M", "VIX6M", "VVIX", "SKEW", "RVX", "VXN", "VXD", "OVX", "GVZ"].includes(s)) return s;
+    // Major indices/ETFs
+    if (["SPX", "NDX", "RUT", "DJX", "OEX"].includes(s)) return s;
+    if (["SPY", "QQQ", "IWM", "TLT", "HYG", "GLD", "USO", "EEM", "UVXY", "SVXY", "VXX"].includes(s)) return s;
+    // Sector ETFs
+    if (s.startsWith("XL") && s.length === 3) return s;
+    // Individual stocks
+    if (cats.includes("Crypto")) return null; // No UW data for crypto indices
+    if (cats.includes("Europe")) return null;
+    if (cats.includes("Morningstar")) return null;
+    // Try it anyway for stocks/ETFs
+    if (s.length <= 5 && !s.includes(".") && !s.includes("-")) return s;
+    return null;
+  }, [symbol, cats]);
+
+  useEffect(() => {
+    if (!queryTicker) { setLoading(false); setError("no_data"); return; }
+    setLoading(true);
+    setError("");
+
+    fetch(`${API}/api/uw/iv-rank?ticker=${queryTicker}`)
+      .then(r => r.json())
+      .then(res => {
+        const arr = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        if (!arr.length) { setError("no_data"); setLoading(false); return; }
+        // Take last 90 days
+        const recent = arr.slice(-90).map((d: any) => ({
+          date: d.date?.slice(5) || "",
+          close: d.close ? parseFloat(d.close) : null,
+          iv: d.volatility ? parseFloat(d.volatility) * 100 : null,
+          ivRank: d.iv_rank_1y ? parseFloat(d.iv_rank_1y) : null,
+        })).filter((d: any) => d.close !== null || d.iv !== null);
+        setChartData(recent);
+        setLoading(false);
+      })
+      .catch(() => { setError("fetch_error"); setLoading(false); });
+  }, [queryTicker]);
+
+  // For VIX-like tickers, show the price as the main chart (it IS the volatility)
+  const isVolIndex = cats.includes("Volatility") || ["VIX", "VIX9D", "VIX3M", "VIX6M", "VVIX", "SKEW", "RVX", "VXN", "VXD", "OVX", "GVZ"].includes(symbol);
+
+  if (loading) return (
+    <div className="bg-[#0D0D10] rounded-xl border border-[#1E1E22] p-4 h-[200px] flex items-center justify-center">
+      <span className="text-xs text-[#6B6B75] animate-pulse">Chargement du graphique...</span>
+    </div>
+  );
+
+  if (error || !chartData.length) return (
+    <div className="bg-[#0D0D10] rounded-xl border border-[#1E1E22] p-4">
+      <div className="text-center py-8">
+        <div className="text-3xl mb-2 opacity-30">{isVolIndex ? "📊" : cats.includes("Crypto") ? "₿" : cats.includes("Europe") ? "🇪🇺" : "📈"}</div>
+        <div className="text-xs text-[#6B6B75]">
+          {cats.includes("Volatility") ? "Indice de volatilite — mesure l'incertitude du marche" :
+           cats.includes("Crypto") ? "Indice crypto — prix de reference pour actifs numeriques" :
+           cats.includes("Europe") ? "Indice europeen — performance des marches UE" :
+           cats.includes("Rates") ? "Taux d'interet — reference pour le marche obligataire" :
+           cats.includes("Buffer/Protection") ? "Strategie structuree — buffer de protection + gain plafonne" :
+           cats.includes("BuyWrite/PutWrite") ? "Strategie d'options — revenu premium via vente d'options" :
+           cats.includes("ETF/INAV") ? "Valeur indicative intraday d'un ETF" :
+           cats.includes("Sector") ? "Indice sectoriel — performance d'un secteur economique" :
+           "Donnees historiques non disponibles pour cet indice"}
+        </div>
+      </div>
+    </div>
+  );
+
+  const hasIV = chartData.some((d: any) => d.iv != null);
+  const hasClose = chartData.some((d: any) => d.close != null);
+  const lastClose = chartData[chartData.length - 1]?.close;
+  const firstClose = chartData[0]?.close;
+  const changePct = firstClose && lastClose ? ((lastClose - firstClose) / firstClose * 100) : null;
+  const lastIV = chartData[chartData.length - 1]?.iv;
+
+  return (
+    <div className="bg-[#0D0D10] rounded-xl border border-[#1E1E22] p-4">
+      {/* Mini stats */}
+      <div className="flex items-center gap-4 mb-3">
+        {hasClose && lastClose && (
+          <div>
+            <span className="text-[10px] text-[#6B6B75] uppercase">{isVolIndex ? "Niveau" : "Prix"}</span>
+            <div className="text-sm font-bold font-mono text-white">{lastClose.toFixed(2)}</div>
+          </div>
+        )}
+        {changePct !== null && (
+          <div>
+            <span className="text-[10px] text-[#6B6B75] uppercase">90j</span>
+            <div className="text-sm font-bold font-mono" style={{ color: changePct >= 0 ? "#22C55E" : "#EF4444" }}>
+              {changePct >= 0 ? "+" : ""}{changePct.toFixed(1)}%
+            </div>
+          </div>
+        )}
+        {hasIV && lastIV && (
+          <div>
+            <span className="text-[10px] text-[#6B6B75] uppercase">IV</span>
+            <div className="text-sm font-bold font-mono text-[#AB47BC]">{lastIV.toFixed(1)}%</div>
+          </div>
+        )}
+        <div className="ml-auto text-[9px] text-[#555]">90 jours</div>
+      </div>
+
+      {/* Chart */}
+      <ResponsiveContainer width="100%" height={160}>
+        {hasIV && !isVolIndex ? (
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" />
+            <XAxis dataKey="date" tick={{ fill: "#555", fontSize: 8 }} interval="preserveStartEnd" />
+            <YAxis yAxisId="price" tick={{ fill: "#555", fontSize: 8 }} domain={["auto", "auto"]} />
+            <YAxis yAxisId="iv" orientation="right" tick={{ fill: "#555", fontSize: 8 }} />
+            <Tooltip
+              contentStyle={{ backgroundColor: "#1A1A1E", border: "1px solid #2A2A2E", borderRadius: 8, fontSize: 11 }}
+              labelStyle={{ color: "#6B6B75" }}
+            />
+            <Line yAxisId="price" dataKey="close" stroke="#42A5F5" strokeWidth={1.5} dot={false} name="Prix" />
+            <Line yAxisId="iv" dataKey="iv" stroke="#AB47BC" strokeWidth={1} dot={false} name="IV %" strokeDasharray="3 3" />
+          </LineChart>
+        ) : (
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="tickerGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={isVolIndex ? "#EF4444" : "#FF6B00"} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={isVolIndex ? "#EF4444" : "#FF6B00"} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" />
+            <XAxis dataKey="date" tick={{ fill: "#555", fontSize: 8 }} interval="preserveStartEnd" />
+            <YAxis tick={{ fill: "#555", fontSize: 8 }} domain={["auto", "auto"]} />
+            <Tooltip
+              contentStyle={{ backgroundColor: "#1A1A1E", border: "1px solid #2A2A2E", borderRadius: 8, fontSize: 11 }}
+              labelStyle={{ color: "#6B6B75" }}
+            />
+            <Area dataKey="close" stroke={isVolIndex ? "#EF4444" : "#FF6B00"} fill="url(#tickerGrad)" strokeWidth={1.5} dot={false} name={isVolIndex ? "Niveau" : "Prix"} />
+          </AreaChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 /* ── Category colors ── */
 const CAT_COLORS: Record<string, string> = {
@@ -266,6 +419,12 @@ export default function CboeTickersPage() {
                 <div className="bg-[#0D0D10] rounded-xl p-4 text-sm text-[#C0C0C5] leading-relaxed border border-[#1E1E22]">
                   {selectedTicker.explanation}
                 </div>
+              </div>
+
+              {/* Visual / Chart */}
+              <div className="mb-6">
+                <div className="text-[10px] text-[#6B6B75] uppercase tracking-widest mb-2">Apercu visuel</div>
+                <TickerVisual symbol={selectedTicker.sym} cats={selectedTicker.cats} />
               </div>
 
               {/* Related */}
