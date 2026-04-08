@@ -1,6 +1,11 @@
 """TWS Market Data — readonly, no personal data"""
-from fastapi import APIRouter
-from services.tws import fetch_quotes, compute_regime, WATCHLIST_VOL, WATCHLIST_FX, qualified, ib_connected
+from fastapi import APIRouter, Query
+from services.tws import fetch_quotes, compute_regime, WATCHLIST_VOL, WATCHLIST_FX, qualified, ib_connected, ib
+from services.vol_desk_collector import (
+    collect_vol_desk_snapshot, save_snapshot,
+    get_history, get_ticker_history, get_latest_snapshot, get_sector_summary,
+    SECTOR_ETFS, CROSS_ASSET_VOL,
+)
 
 router = APIRouter()
 
@@ -31,3 +36,49 @@ def reconnect():
     if ok:
         qualify_all()
     return {"reconnected": ok}
+
+# ================================================================
+# Vol Desk Historical Data
+# ================================================================
+
+@router.get("/vol-desk/collect")
+def vol_desk_collect():
+    """Trigger a Vol Desk snapshot collection (requires TWS connected)"""
+    if not ib_connected:
+        return {"error": "TWS non connecte — impossible de collecter"}
+    snapshot = collect_vol_desk_snapshot(ib)
+    if "error" in snapshot:
+        return snapshot
+    days = save_snapshot(snapshot)
+    return {"status": "ok", "date": snapshot["date"], "tickers_collected": snapshot["count"], "total_days_saved": days}
+
+@router.get("/vol-desk/latest")
+def vol_desk_latest():
+    """Get the most recent Vol Desk snapshot (works without TWS)"""
+    snap = get_latest_snapshot()
+    if not snap:
+        return {"error": "Aucun historique. Lancez /api/market/vol-desk/collect avec TWS."}
+    return snap
+
+@router.get("/vol-desk/history")
+def vol_desk_history(days: int = 90):
+    """Get Vol Desk history (all tickers, N days)"""
+    return get_history(days)
+
+@router.get("/vol-desk/ticker")
+def vol_desk_ticker(symbol: str = "XLK", days: int = 90):
+    """Get historical IV/HV/price for a single ticker"""
+    return get_ticker_history(symbol.upper(), days)
+
+@router.get("/vol-desk/sectors")
+def vol_desk_sectors(days: int = 30):
+    """Get sector ETF IV/HV evolution summary"""
+    return get_sector_summary(days)
+
+@router.get("/vol-desk/universe")
+def vol_desk_universe():
+    """List all tracked tickers with metadata"""
+    all_tickers = {}
+    all_tickers.update(SECTOR_ETFS)
+    all_tickers.update(CROSS_ASSET_VOL)
+    return {"tickers": all_tickers, "count": len(all_tickers)}

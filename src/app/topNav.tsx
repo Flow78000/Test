@@ -23,6 +23,7 @@ const SECTIONS = [
   { id: "VOL", label: "VOL", color: "#FFA726", icon: "▲",
     pages: [
       { href: "/vol-desk", label: "Desk" },
+      { href: "/vol-monitor", label: "Monitor" },
       { href: "/vol-cone", label: "Cone" },
       { href: "/term-structure", label: "Structure" },
       { href: "/vol-map", label: "Map" },

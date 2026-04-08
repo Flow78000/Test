@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query
 from services.sierra_reader import (
     sierra_scan_files, sierra_read_last_bars, sierra_read_history,
     sierra_mean_reversion_signals, sierra_columns, sierra_dashboard,
-    sierra_performance
+    sierra_performance, sierra_gex_analysis
 )
 
 router = APIRouter()
@@ -59,6 +59,11 @@ def performance_all():
     for sym in files:
         all_perf[sym] = sierra_performance(sym)
     return {"assets": all_perf, "asset_count": len(all_perf)}
+
+@router.get("/gex-analysis")
+def gex_analysis(bars: int = 5000):
+    """Analyse Total GEX crossings, distribution, and time series from SP500GEX"""
+    return sierra_gex_analysis(bars)
 
 @router.get("/signal-history")
 def signal_history():

@@ -176,6 +176,7 @@ def sierra_read_last_bars(n=20, symbol=None):
             if k in GEX_KEYS:
                 gex_data[k] = last[key]
 
+        data_age = time.time() - mtime
         result = {
             "symbol": symbol or "USEquities",
             "signals": signals,
@@ -187,6 +188,8 @@ def sierra_read_last_bars(n=20, symbol=None):
             "total_bars": len(lines) - 1,
             "columns_count": len(header),
             "file_modified": datetime.fromtimestamp(mtime).isoformat(),
+            "data_age_seconds": round(data_age),
+            "is_stale": data_age > 300,  # >5 min = stale
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "_mtime": mtime,
         }
@@ -205,6 +208,7 @@ def sierra_read_history(bars=100, symbol=None):
         return {"error": f"Fichier Sierra non trouve pour {symbol or 'USEquities'}"}
 
     try:
+        mtime = os.path.getmtime(csv_path)
         with open(csv_path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
 
@@ -224,11 +228,15 @@ def sierra_read_history(bars=100, symbol=None):
                         row[h.strip()] = cols[i].strip()
             history.append(row)
 
+        data_age = time.time() - mtime
         return {
             "symbol": symbol or "USEquities",
             "history": history,
             "columns": [h.strip() for h in header],
             "count": len(history),
+            "file_modified": datetime.fromtimestamp(mtime).isoformat(),
+            "data_age_seconds": round(data_age),
+            "is_stale": data_age > 300,
             "timestamp": datetime.utcnow().isoformat() + "Z",
         }
     except Exception as e:
@@ -557,6 +565,203 @@ def sierra_performance(symbol=None):
         return {"error": str(e)}
 
 
+def sierra_gex_analysis(bars=5000):
+    """Analyse Total GEX crossings: zero line, levels 10/20/30/40 and negatives.
+    Returns time series + crossing stats + level distribution."""
+    csv_path = sierra_get_csv_path("SP500GEX")
+    if not csv_path:
+        return {"error": "Fichier SP500GEX non trouve"}
+
+    cache_key = f"gex_analysis_{bars}"
+    cached = _get_cached(cache_key, 120)
+    if cached:
+        return cached
+
+    try:
+        mtime = os.path.getmtime(csv_path)
+        with open(csv_path, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+
+        header = [h.strip() for h in lines[0].split(",")]
+
+        # Find key column indices
+        col_map = {}
+        targets = ["Total GEX", "Total Delta", "Call GEX", "Put GEX",
+                    "Call Delta", "Put Delta", "GTS", "Volatility Trend",
+                    "Last", "High", "Low", "Date", "Time"]
+        for i, h in enumerate(header):
+            hs = h.strip()
+            if hs in targets:
+                if hs not in col_map:
+                    col_map[hs] = i
+
+        if "Total GEX" not in col_map:
+            return {"error": "Colonne Total GEX non trouvee dans SP500GEX"}
+
+        # Parse bars
+        data_lines = lines[1:]
+        start = max(0, len(data_lines) - bars)
+        parsed = []
+
+        for line in data_lines[start:]:
+            cols = [c.strip() for c in line.split(",")]
+            try:
+                row = {
+                    "date": cols[col_map.get("Date", 0)] if "Date" in col_map else cols[0],
+                    "time": cols[col_map.get("Time", 1)] if "Time" in col_map else (cols[1] if len(cols) > 1 else ""),
+                }
+                for key in ["Total GEX", "Total Delta", "Call GEX", "Put GEX",
+                            "Call Delta", "Put Delta", "GTS", "Volatility Trend", "Last"]:
+                    if key in col_map and col_map[key] < len(cols):
+                        try:
+                            row[key] = float(cols[col_map[key]])
+                        except (ValueError, TypeError):
+                            row[key] = None
+                    else:
+                        row[key] = None
+
+                if row.get("Total GEX") is not None:
+                    parsed.append(row)
+            except (IndexError, ValueError):
+                continue
+
+        if not parsed:
+            return {"error": "Aucune donnee GEX parsee"}
+
+        # === CROSSING ANALYSIS ===
+        levels = [-40, -30, -20, -10, 0, 10, 20, 30, 40]
+        crossings = {str(lvl): {"up": 0, "down": 0, "events": []} for lvl in levels}
+
+        # Track what happens after each crossing (price move in next N bars)
+        LOOK_AHEAD = 20  # bars after crossing
+
+        for i in range(1, len(parsed)):
+            prev_gex = parsed[i - 1].get("Total GEX")
+            curr_gex = parsed[i].get("Total GEX")
+            if prev_gex is None or curr_gex is None:
+                continue
+
+            for lvl in levels:
+                # Crossing up
+                if prev_gex < lvl and curr_gex >= lvl:
+                    event = {
+                        "bar": i, "date": parsed[i]["date"], "time": parsed[i]["time"],
+                        "gex_before": round(prev_gex, 2), "gex_after": round(curr_gex, 2),
+                        "price": parsed[i].get("Last"), "direction": "up",
+                    }
+                    # Measure price outcome
+                    if parsed[i].get("Last") and i + LOOK_AHEAD < len(parsed):
+                        entry = parsed[i]["Last"]
+                        future_prices = [parsed[i + j].get("Last") for j in range(1, LOOK_AHEAD + 1)
+                                         if parsed[i + j].get("Last") is not None]
+                        if future_prices:
+                            event["price_change_pct"] = round((future_prices[-1] - entry) / entry * 100, 4)
+                            event["max_up_pct"] = round((max(future_prices) - entry) / entry * 100, 4)
+                            event["max_down_pct"] = round((min(future_prices) - entry) / entry * 100, 4)
+                    crossings[str(lvl)]["up"] += 1
+                    crossings[str(lvl)]["events"].append(event)
+
+                # Crossing down
+                elif prev_gex > lvl and curr_gex <= lvl:
+                    event = {
+                        "bar": i, "date": parsed[i]["date"], "time": parsed[i]["time"],
+                        "gex_before": round(prev_gex, 2), "gex_after": round(curr_gex, 2),
+                        "price": parsed[i].get("Last"), "direction": "down",
+                    }
+                    if parsed[i].get("Last") and i + LOOK_AHEAD < len(parsed):
+                        entry = parsed[i]["Last"]
+                        future_prices = [parsed[i + j].get("Last") for j in range(1, LOOK_AHEAD + 1)
+                                         if parsed[i + j].get("Last") is not None]
+                        if future_prices:
+                            event["price_change_pct"] = round((future_prices[-1] - entry) / entry * 100, 4)
+                            event["max_up_pct"] = round((max(future_prices) - entry) / entry * 100, 4)
+                            event["max_down_pct"] = round((min(future_prices) - entry) / entry * 100, 4)
+                    crossings[str(lvl)]["down"] += 1
+                    crossings[str(lvl)]["events"].append(event)
+
+        # === STATS PER LEVEL ===
+        level_stats = {}
+        for lvl_str, data in crossings.items():
+            events_with_outcome = [e for e in data["events"] if "price_change_pct" in e]
+            up_events = [e for e in events_with_outcome if e["direction"] == "up"]
+            down_events = [e for e in events_with_outcome if e["direction"] == "down"]
+
+            def avg(lst, key):
+                vals = [e[key] for e in lst if key in e]
+                return round(sum(vals) / len(vals), 4) if vals else 0
+
+            level_stats[lvl_str] = {
+                "crossings_up": data["up"],
+                "crossings_down": data["down"],
+                "total_crossings": data["up"] + data["down"],
+                "up_avg_price_change": avg(up_events, "price_change_pct"),
+                "up_avg_max_up": avg(up_events, "max_up_pct"),
+                "up_avg_max_down": avg(up_events, "max_down_pct"),
+                "down_avg_price_change": avg(down_events, "price_change_pct"),
+                "down_avg_max_up": avg(down_events, "max_up_pct"),
+                "down_avg_max_down": avg(down_events, "max_down_pct"),
+                "last_5_events": data["events"][-5:],
+            }
+
+        # === GEX DISTRIBUTION ===
+        gex_values = [p["Total GEX"] for p in parsed if p["Total GEX"] is not None]
+        distribution = {}
+        if gex_values:
+            distribution = {
+                "min": round(min(gex_values), 2),
+                "max": round(max(gex_values), 2),
+                "mean": round(sum(gex_values) / len(gex_values), 2),
+                "current": round(gex_values[-1], 2),
+                "pct_positive": round(sum(1 for v in gex_values if v > 0) / len(gex_values) * 100, 1),
+                "pct_above_20": round(sum(1 for v in gex_values if v > 20) / len(gex_values) * 100, 1),
+                "pct_below_neg20": round(sum(1 for v in gex_values if v < -20) / len(gex_values) * 100, 1),
+            }
+
+        # === TIME SERIES (downsample for frontend) ===
+        # Return every Nth bar to keep under ~500 points
+        step = max(1, len(parsed) // 500)
+        time_series = []
+        for i in range(0, len(parsed), step):
+            p = parsed[i]
+            time_series.append({
+                "date": p["date"],
+                "time": p["time"],
+                "total_gex": p.get("Total GEX"),
+                "total_delta": p.get("Total Delta"),
+                "call_gex": p.get("Call GEX"),
+                "put_gex": p.get("Put GEX"),
+                "gts": p.get("GTS"),
+                "price": p.get("Last"),
+            })
+
+        result = {
+            "bars_analyzed": len(parsed),
+            "total_bars_available": len(data_lines),
+            "level_stats": level_stats,
+            "distribution": distribution,
+            "time_series": time_series,
+            "current": {
+                "total_gex": parsed[-1].get("Total GEX") if parsed else None,
+                "total_delta": parsed[-1].get("Total Delta") if parsed else None,
+                "call_gex": parsed[-1].get("Call GEX") if parsed else None,
+                "put_gex": parsed[-1].get("Put GEX") if parsed else None,
+                "gts": parsed[-1].get("GTS") if parsed else None,
+                "price": parsed[-1].get("Last") if parsed else None,
+                "date": parsed[-1].get("date") if parsed else None,
+                "time": parsed[-1].get("time") if parsed else None,
+            },
+            "file_modified": datetime.fromtimestamp(mtime).isoformat(),
+            "data_age_seconds": round(time.time() - mtime),
+            "is_stale": (time.time() - mtime) > 300,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+        }
+        _set_cache(cache_key, result)
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def sierra_dashboard():
     """Build a complete dashboard view across all available Sierra CSV files"""
     files = sierra_scan_files()
@@ -657,9 +862,23 @@ def sierra_dashboard():
     # Sort MR signals by date/time (most recent first)
     all_mr_signals.sort(key=lambda s: (s.get("date", ""), s.get("time", "")), reverse=True)
 
+    # Compute freshness from most recent file
+    newest_mtime = 0
+    for sym, info in files.items():
+        try:
+            mt = os.path.getmtime(info["path"])
+            if mt > newest_mtime:
+                newest_mtime = mt
+        except:
+            pass
+    data_age = round(time.time() - newest_mtime) if newest_mtime else None
+
     return {
         "asset_classes": asset_classes,
         "signals": all_mr_signals[:20],
         "files_detected": len(files),
+        "file_modified": datetime.fromtimestamp(newest_mtime).isoformat() if newest_mtime else None,
+        "data_age_seconds": data_age,
+        "is_stale": data_age > 300 if data_age else True,
         "timestamp": datetime.utcnow().isoformat() + "Z",
     }

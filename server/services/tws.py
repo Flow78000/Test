@@ -139,10 +139,35 @@ def safe_float(val):
         return None
 
 
+def ensure_connected():
+    """Auto-reconnect if TWS dropped"""
+    global ib, ib_connected
+    if ib_connected and ib and ib.isConnected():
+        return True
+    # Try reconnect silently
+    ib_connected = False
+    try:
+        if ib:
+            try:
+                ib.disconnect()
+            except:
+                pass
+        ib = IB()
+        ib.connect(TWS_HOST, TWS_PORT, clientId=TWS_CLIENT_ID, timeout=10, readonly=True)
+        ib_connected = True
+        qualify_all()
+        print("  [TWS] Reconnexion automatique reussie")
+        return True
+    except:
+        ib_connected = False
+        return False
+
+
 def fetch_quotes(names_subset=None):
     """Fetch market data for instruments — returns ONLY market prices, no account data"""
-    if not ib_connected:
-        return {"error": "TWS non connecte", "help": "Lancez TWS et appelez /api/reconnect"}
+    if not ib_connected or not (ib and ib.isConnected()):
+        if not ensure_connected():
+            return {"error": "TWS non connecte", "help": "Lancez TWS et appelez /api/reconnect"}
 
     targets = {k: v for k, v in qualified.items() if names_subset is None or k in names_subset}
 

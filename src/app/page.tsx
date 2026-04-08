@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Card, KpiCard, Badge, LiveBadge } from "@/components/ui/card";
 import { SkeletonGrid, ErrorCard } from "@/components/ui/skeleton";
+import { DataFreshness } from "@/components/ui/data-freshness";
 import { fmtPremium, fmtK, timeAgo, regimeFromIV, fmtPrice, fmtPct } from "@/lib/format";
 
 const API = "http://localhost:3850";
@@ -14,6 +15,7 @@ interface DashData {
   dpss: any; gex: any; flowScore: any;
   darkPools: any[]; flowAlerts: any[]; tide: any;
   signals: any[]; sectors: any[];
+  sierraFreshness: { file_modified?: string; data_age_seconds?: number; is_stale?: boolean } | null;
 }
 
 async function fetchJson(path: string) {
@@ -56,6 +58,11 @@ async function loadAll(): Promise<DashData | null> {
       tide: tide?.data || tide || null,
       signals: (sierra?.data || sierra?.signals || []).slice(0, 5),
       sectors: (sect?.data || sect || []).slice(0, 5),
+      sierraFreshness: sierra ? {
+        file_modified: sierra.file_modified,
+        data_age_seconds: sierra.data_age_seconds,
+        is_stale: sierra.is_stale,
+      } : null,
     };
   } catch { return null; }
 }
@@ -95,6 +102,15 @@ export default function Dashboard() {
         <Chip label="QQQ" value="--" color="#F0F0F0" />
         <div className="ml-auto"><LiveBadge /></div>
       </div>
+
+      {/* Sierra Data Freshness */}
+      {data.sierraFreshness && (
+        <DataFreshness
+          fileModified={data.sierraFreshness.file_modified}
+          dataAgeSeconds={data.sierraFreshness.data_age_seconds}
+          isStale={data.sierraFreshness.is_stale}
+        />
+      )}
 
       {/* Row 2 — Main Grid */}
       <div className="grid grid-cols-12 gap-4">

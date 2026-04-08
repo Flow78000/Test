@@ -2,105 +2,40 @@
 
 import { useState, useMemo } from "react";
 import { Card, PageHeader, Badge } from "@/components/ui/card";
+import tickerData from "@/data/cboe-tickers.json";
 
 /* ── Category color map ── */
 const CAT_COLORS: Record<string, string> = {
   Volatility: "#F87171",
   Index: "#42A5F5",
   Rates: "#F472B6",
-  BuyWrite: "#FF6B00",
-  Buffer: "#A3E635",
+  "BuyWrite/PutWrite": "#FF6B00",
+  "Buffer/Protection": "#A3E635",
   Options: "#FBBF24",
   Crypto: "#B388FF",
   "ETF/INAV": "#34D399",
   Europe: "#818CF8",
   Sector: "#C084FC",
   Morningstar: "#6B6B75",
+  Other: "#555",
 };
 
 const ALL_CATS = ["All", ...Object.keys(CAT_COLORS)] as const;
 
-/* ── Ticker data (~55 representative tickers) ── */
 interface Ticker {
   sym: string;
   desc: string;
   cats: string[];
 }
 
-const TICKERS: Ticker[] = [
-  // Volatility
-  { sym: "VIX", desc: "Cboe Volatility Index", cats: ["Volatility"] },
-  { sym: "VIX9D", desc: "Cboe S&P 500 9-Day Volatility Index", cats: ["Volatility"] },
-  { sym: "VIX3M", desc: "Cboe S&P 500 Three-Month Volatility Index", cats: ["Volatility"] },
-  { sym: "VIX6M", desc: "Cboe S&P 500 6-Month Volatility Index", cats: ["Volatility"] },
-  { sym: "VVIX", desc: "Cboe VIX of VIX Index", cats: ["Volatility"] },
-  { sym: "SKEW", desc: "CBOE SKEW Index", cats: ["Volatility"] },
-  { sym: "RVX", desc: "Cboe Russell 2000 VIX Index", cats: ["Volatility"] },
-  { sym: "VXN", desc: "Cboe Nasdaq-100 VIX Index", cats: ["Volatility"] },
-  { sym: "VXD", desc: "Cboe Dow Jones Industrial Average VIX Index", cats: ["Volatility"] },
-  { sym: "OVX", desc: "Cboe Crude Oil ETF USO VIX Index", cats: ["Volatility"] },
-  { sym: "GVZ", desc: "Cboe Gold ETF GLD VIX Index", cats: ["Volatility"] },
-  // Index
-  { sym: "SPX", desc: "S&P 500 Index", cats: ["Index"] },
-  { sym: "NDX", desc: "Nasdaq-100 Index", cats: ["Index"] },
-  { sym: "RUT", desc: "Russell 2000 Index", cats: ["Index"] },
-  { sym: "DJX", desc: "Dow Jones Industrial Average 1/100th", cats: ["Index"] },
-  { sym: "OEX", desc: "S&P 100 Index", cats: ["Index"] },
-  // Rates
-  { sym: "IRX", desc: "3-Month T-Bill Rate", cats: ["Rates"] },
-  { sym: "FVX", desc: "5-Year Note Rate", cats: ["Rates"] },
-  { sym: "TNX", desc: "10-Year Note Rate", cats: ["Rates"] },
-  { sym: "TYX", desc: "30-Year Bond Rate", cats: ["Rates"] },
-  // BuyWrite
-  { sym: "BXM", desc: "Cboe S&P 500 BuyWrite Index", cats: ["BuyWrite"] },
-  { sym: "BXMD", desc: "Cboe S&P 500 30-Delta BuyWrite Index", cats: ["BuyWrite"] },
-  { sym: "PUT", desc: "CBOE S&P 500 PutWrite Index", cats: ["BuyWrite"] },
-  { sym: "PUTY", desc: "CBOE S&P 500 PutWrite OTM Index", cats: ["BuyWrite"] },
-  { sym: "BXR", desc: "Russell 2000 BuyWrite Index", cats: ["BuyWrite"] },
-  { sym: "WPUT", desc: "Cboe S&P 500 One-Week PutWrite Index", cats: ["BuyWrite"] },
-  { sym: "BXMW", desc: "Cboe S&P 500 Multi-Week BuyWrite Index", cats: ["BuyWrite"] },
-  // Buffer
-  { sym: "SPRF", desc: "Cboe S&P 500 15% Buffer Protect Index Balanced Series", cats: ["Buffer"] },
-  { sym: "SPRO", desc: "Cboe S&P 500 Buffer Protect Index Balanced Series", cats: ["Buffer"] },
-  { sym: "SPEN", desc: "Cboe S&P 500 Enhanced Growth Index Series", cats: ["Buffer"] },
-  { sym: "RPEN", desc: "Cboe Russell 2000 Enhanced Growth Index Series", cats: ["Buffer"] },
-  // Options Strategies
-  { sym: "CNDR", desc: "Cboe S&P 500 Iron Condor Index", cats: ["Options"] },
-  { sym: "BFLY", desc: "Cboe S&P 500 Iron Butterfly Index", cats: ["Options"] },
-  { sym: "CLL", desc: "CBOE Collar 95-110 Index", cats: ["Options"] },
-  { sym: "PPUT", desc: "Cboe S&P 500 5% Put Protection Index", cats: ["Options"] },
-  { sym: "RXM", desc: "CBOE S&P 500 Risk Reversal Index", cats: ["Options"] },
-  { sym: "CLLZ", desc: "Cboe S&P 500 Zero-Cost Put Spread Collar Index", cats: ["Options"] },
-  // Crypto
-  { sym: "BTC1RP", desc: "Cboe 1 Bitcoin / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "BTC10RP", desc: "Cboe 10 Bitcoin / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "ETH100RP", desc: "Cboe 100 Ethereum / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "SOL100RP", desc: "Cboe 100 Solana / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "AAVE100", desc: "Cboe 100 Aave / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "ADA100K", desc: "Cboe 100K Cardano / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "DOGE100K", desc: "Cboe 100K Dogecoin / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "LINK100", desc: "Cboe 100 Chainlink / US Dollar RealPrice Index", cats: ["Crypto"] },
-  { sym: "SOL1KRP", desc: "Cboe 1000 Solana / US Dollar RealPrice Index", cats: ["Crypto"] },
-  // ETF / INAV
-  { sym: "AGQIV", desc: "ProShares Ultra Silver ETF INAV", cats: ["ETF/INAV"] },
-  { sym: "ANEWIV", desc: "ProShares MSCI Transformational Changes ETF INAV", cats: ["ETF/INAV"] },
-  { sym: "APRTIV", desc: "AllianzIM U.S. Large Cap Buffer10 Apr ETF INAV", cats: ["ETF/INAV"] },
-  // Europe
-  { sym: "BEP50N", desc: "Cboe Europe 50 (Net Return)", cats: ["Europe"] },
-  { sym: "BEP50P", desc: "Cboe Europe 50 (Price Return)", cats: ["Europe"] },
-  { sym: "BUK100N", desc: "Cboe UK 100 (Net Return)", cats: ["Europe"] },
-  { sym: "BUK100P", desc: "Cboe UK 100 (Price Return)", cats: ["Europe"] },
-  { sym: "BDE40N", desc: "Cboe Germany 40 (Net Return)", cats: ["Europe"] },
-  { sym: "BDE40G", desc: "Cboe Germany 40 (Gross Return)", cats: ["Europe"] },
-  { sym: "BFR40N", desc: "Cboe France 40 (Net Return)", cats: ["Europe"] },
-  { sym: "BFR40P", desc: "Cboe France 40 (Price Return)", cats: ["Europe"] },
-  // Morningstar
-  { sym: "MSDXUTPU", desc: "Morningstar Developed Markets ex-US Target Market Exposure PR USD", cats: ["Morningstar"] },
-];
+const TICKERS: Ticker[] = tickerData as Ticker[];
+
+const PAGE_SIZE = 100;
 
 export default function CboeTickersPage() {
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState<string>("All");
+  const [page, setPage] = useState(0);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -114,6 +49,12 @@ export default function CboeTickersPage() {
     });
   }, [search, activeCat]);
 
+  // Reset page when filter changes
+  useMemo(() => setPage(0), [search, activeCat]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   const catCounts = useMemo(() => {
     const m: Record<string, number> = { All: TICKERS.length };
     for (const t of TICKERS) for (const c of t.cats) m[c] = (m[c] || 0) + 1;
@@ -124,7 +65,7 @@ export default function CboeTickersPage() {
     <div className="p-6 max-w-[1400px] mx-auto">
       <PageHeader
         title="Reference Tickers CBOE"
-        subtitle="1000+ indices CBOE Global — recherche et categorisation"
+        subtitle={`${TICKERS.length} indices CBOE Global — recherche et categorisation`}
       />
 
       {/* Search */}
@@ -164,7 +105,45 @@ export default function CboeTickersPage() {
         <span>
           <span className="font-semibold text-[#F0F0F0]">{Object.keys(CAT_COLORS).length}</span> categories
         </span>
+        {totalPages > 1 && (
+          <span>
+            Page <span className="text-[#F0F0F0] font-semibold">{page + 1}</span> / {totalPages}
+          </span>
+        )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setPage(Math.max(0, page - 1))}
+            disabled={page === 0}
+            className="px-3 py-1.5 rounded-lg text-xs border border-[#1E1E22] bg-[#111114] text-[#6B6B75] hover:border-[#FF6B00] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Precedent
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs border transition-colors ${
+                page === i
+                  ? "bg-[#FF6B00] text-black border-[#FF6B00]"
+                  : "bg-[#111114] text-[#6B6B75] border-[#1E1E22] hover:border-[#555]"
+              }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+            disabled={page >= totalPages - 1}
+            className="px-3 py-1.5 rounded-lg text-xs border border-[#1E1E22] bg-[#111114] text-[#6B6B75] hover:border-[#FF6B00] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            Suivant
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <Card className="overflow-hidden">
@@ -178,13 +157,13 @@ export default function CboeTickersPage() {
                 <th className="text-left p-3 text-[#6B6B75] text-[10px] uppercase tracking-widest font-medium">
                   Description
                 </th>
-                <th className="text-left p-3 text-[#6B6B75] text-[10px] uppercase tracking-widest font-medium w-48">
+                <th className="text-left p-3 text-[#6B6B75] text-[10px] uppercase tracking-widest font-medium w-56">
                   Categorie
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t) => (
+              {paged.map((t) => (
                 <tr
                   key={t.sym}
                   className="border-b border-[#0E0E12] hover:bg-[#ffffff03] transition-colors"

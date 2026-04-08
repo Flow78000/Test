@@ -39,3 +39,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Server data files (generated at runtime)
+server/vol_desk_history.json
+server/sierra_signal_history.json
+server/regime_history.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db

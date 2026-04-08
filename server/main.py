@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from routers import sierra, regime, market, proxy_uw
-from services.tws import connect_tws, disconnect_tws, qualify_all
+from services.tws import connect_tws, disconnect_tws, qualify_all, ensure_connected
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -73,4 +73,15 @@ def health():
     }
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=3850, reload=True)
+    import sys
+    dev_mode = "--dev" in sys.argv
+    uvicorn.run(
+        "main:app",
+        host="127.0.0.1",
+        port=3850,
+        reload=dev_mode,
+        reload_dirs=["routers", "services"] if dev_mode else None,
+        reload_excludes=["*.json", "*.csv", "*.txt", "scripts/*"] if dev_mode else None,
+        timeout_keep_alive=30,
+        log_level="info",
+    )

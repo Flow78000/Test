@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
+import { DataFreshness } from "@/components/ui/data-freshness";
 
 const DELTA_SIGNALS = [
   { asset: "YM", direction: "SHORT", condition: "100% @ 50min", wr: 88, occ: 66, dd: "0.14%" },
@@ -62,6 +63,28 @@ export default function SignalsPage() {
         </Card>
       ) : (
         <>
+          {/* Data Freshness */}
+          <div className="mb-4">
+            <DataFreshness
+              fileModified={data.timestamp}
+              dataAgeSeconds={(() => {
+                // Get max data age from all assets
+                const ages: number[] = [];
+                Object.values(data.asset_classes || {}).forEach((cls: any) => {
+                  Object.values(cls.assets || {}).forEach((a: any) => {
+                    if (a.last_update) {
+                      try {
+                        const d = new Date(a.last_update);
+                        ages.push(Math.round((Date.now() - d.getTime()) / 1000));
+                      } catch {}
+                    }
+                  });
+                });
+                return ages.length ? Math.min(...ages) : undefined;
+              })()}
+            />
+          </div>
+
           {/* Asset classes */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             {Object.entries(data.asset_classes || {}).map(([cls, classData]: [string, any]) => (
