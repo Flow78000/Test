@@ -1,12 +1,244 @@
 {
   "daily": [
     {
-      "date": "2026-04-07",
+      "date": "2026-03-09",
+      "regime": "DEFENSIF",
+      "dpss": 0.5129,
+      "gex_net": 1148354569.93,
+      "flow_score": 0.7832,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-10",
+      "regime": "PRUDENT",
+      "dpss": 0.5766,
+      "gex_net": 2660946651.94,
+      "flow_score": -0.4353,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-11",
       "regime": "HEDGE",
-      "dpss": 0.0604,
-      "gex_net": -11375782317.37,
-      "flow_score": 0.3958,
+      "dpss": 0.4285,
+      "gex_net": -1885092472.22,
+      "flow_score": 0.716,
       "confidence": 33
+    },
+    {
+      "date": "2026-03-12",
+      "regime": "HEDGE",
+      "dpss": 0.4732,
+      "gex_net": -4701551396.64,
+      "flow_score": 0.4861,
+      "confidence": 33
+    },
+    {
+      "date": "2026-03-13",
+      "regime": "DEFENSIF",
+      "dpss": 0.4872,
+      "gex_net": 268620719.98,
+      "flow_score": -0.1737,
+      "confidence": 33
+    },
+    {
+      "date": "2026-03-14",
+      "regime": "HEDGE",
+      "dpss": 0.4439,
+      "gex_net": -429947437.3,
+      "flow_score": -0.4603,
+      "confidence": 0
+    },
+    {
+      "date": "2026-03-15",
+      "regime": "HEDGE",
+      "dpss": 0.451,
+      "gex_net": -2809658490.99,
+      "flow_score": 0.4064,
+      "confidence": 33
+    },
+    {
+      "date": "2026-03-16",
+      "regime": "RISK_ON",
+      "dpss": 0.5841,
+      "gex_net": 1328704077.6,
+      "flow_score": 0.6558,
+      "confidence": 100
+    },
+    {
+      "date": "2026-03-17",
+      "regime": "DEFENSIF",
+      "dpss": 0.5086,
+      "gex_net": 313668446.64,
+      "flow_score": 0.3272,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-18",
+      "regime": "HEDGE",
+      "dpss": 0.4803,
+      "gex_net": -3516939552.85,
+      "flow_score": 0.1259,
+      "confidence": 33
+    },
+    {
+      "date": "2026-03-19",
+      "regime": "DEFENSIF",
+      "dpss": 0.466,
+      "gex_net": 1420358598.09,
+      "flow_score": 0.1422,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-20",
+      "regime": "HEDGE",
+      "dpss": 0.4584,
+      "gex_net": -1442981020.17,
+      "flow_score": -0.3772,
+      "confidence": 0
+    },
+    {
+      "date": "2026-03-21",
+      "regime": "HEDGE",
+      "dpss": 0.4422,
+      "gex_net": -2997470793.91,
+      "flow_score": 0.0936,
+      "confidence": 0
+    },
+    {
+      "date": "2026-03-22",
+      "regime": "DEFENSIF",
+      "dpss": 0.4928,
+      "gex_net": 3497641710.04,
+      "flow_score": 0.2057,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-23",
+      "regime": "DEFENSIF",
+      "dpss": 0.5691,
+      "gex_net": -4296138853.17,
+      "flow_score": -0.3056,
+      "confidence": 33
+    },
+    {
+      "date": "2026-03-24",
+      "regime": "PRUDENT",
+      "dpss": 0.5777,
+      "gex_net": -820650940.45,
+      "flow_score": 0.6643,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-25",
+      "regime": "DEFENSIF",
+      "dpss": 0.4719,
+      "gex_net": 1550957248.9,
+      "flow_score": 0.353,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-26",
+      "regime": "HEDGE",
+      "dpss": 0.502,
+      "gex_net": -3687457517.41,
+      "flow_score": 0.4444,
+      "confidence": 33
+    },
+    {
+      "date": "2026-03-27",
+      "regime": "HEDGE",
+      "dpss": 0.5399,
+      "gex_net": -3494411311.58,
+      "flow_score": -0.2617,
+      "confidence": 0
+    },
+    {
+      "date": "2026-03-28",
+      "regime": "HEDGE",
+      "dpss": 0.4452,
+      "gex_net": -3222501902.64,
+      "flow_score": 0.5949,
+      "confidence": 33
+    },
+    {
+      "date": "2026-03-29",
+      "regime": "DEFENSIF",
+      "dpss": 0.4693,
+      "gex_net": 1812944488.9,
+      "flow_score": 0.6195,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-30",
+      "regime": "PRUDENT",
+      "dpss": 0.6784,
+      "gex_net": -5032173896.69,
+      "flow_score": 0.3668,
+      "confidence": 67
+    },
+    {
+      "date": "2026-03-31",
+      "regime": "PRUDENT",
+      "dpss": 0.5712,
+      "gex_net": -7422437389.32,
+      "flow_score": 0.531,
+      "confidence": 67
+    },
+    {
+      "date": "2026-04-01",
+      "regime": "PRUDENT",
+      "dpss": 0.6106,
+      "gex_net": -3840785652.8,
+      "flow_score": 0.1724,
+      "confidence": 67
+    },
+    {
+      "date": "2026-04-02",
+      "regime": "DEFENSIF",
+      "dpss": 0.6486,
+      "gex_net": -235990270.6,
+      "flow_score": -0.4286,
+      "confidence": 33
+    },
+    {
+      "date": "2026-04-03",
+      "regime": "PRUDENT",
+      "dpss": 0.7319,
+      "gex_net": -288832990.99,
+      "flow_score": 0.129,
+      "confidence": 67
+    },
+    {
+      "date": "2026-04-04",
+      "regime": "PRUDENT",
+      "dpss": 0.6824,
+      "gex_net": -2423998580.54,
+      "flow_score": 0.2491,
+      "confidence": 67
+    },
+    {
+      "date": "2026-04-05",
+      "regime": "PRUDENT",
+      "dpss": 0.5844,
+      "gex_net": -5773888093.27,
+      "flow_score": -0.1284,
+      "confidence": 33
+    },
+    {
+      "date": "2026-04-06",
+      "regime": "DEFENSIF",
+      "dpss": 0.6831,
+      "gex_net": -6381489350.89,
+      "flow_score": -0.446,
+      "confidence": 33
+    },
+    {
+      "date": "2026-04-07",
+      "regime": "PRUDENT",
+      "dpss": 0.6096,
+      "gex_net": -358689298.2,
+      "flow_score": 0.3943,
+      "confidence": 67
     },
     {
       "date": "2026-04-08",
