@@ -22,6 +22,20 @@ async def lifespan(app: FastAPI):
     print("  ===========================")
     connect_tws()
     qualify_all()
+    # Auto-collect vol desk snapshot if TWS is connected
+    from services.tws import ib_connected, ib
+    if ib_connected:
+        try:
+            from services.vol_desk_collector import collect_vol_desk_snapshot, save_snapshot
+            print("  [FLO.W] Auto-collecte Vol Desk...")
+            snapshot = collect_vol_desk_snapshot(ib)
+            if "error" not in snapshot:
+                days = save_snapshot(snapshot)
+                print(f"  [FLO.W] Vol Desk: {snapshot['count']} tickers, {days} jours en historique")
+            else:
+                print(f"  [FLO.W] Vol Desk skip: {snapshot.get('error')}")
+        except Exception as e:
+            print(f"  [FLO.W] Vol Desk auto-collect error: {e}")
     yield
     # Shutdown
     disconnect_tws()

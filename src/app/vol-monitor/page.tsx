@@ -36,26 +36,65 @@ function VolDeskLiveTab() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [collecting, setCollecting] = useState(false);
+  const [collectMsg, setCollectMsg] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
-      setData(res);
+      if (res && !res.error) {
+        setData(res);
+      } else {
+        // No cached data — try auto-collect
+        setCollectMsg("Premiere collecte automatique...");
+        try {
+          const collectRes = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+          if (collectRes && !collectRes.error) {
+            const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+            if (fresh && !fresh.error) setData(fresh);
+            setCollectMsg(`Collecte reussie: ${collectRes.tickers_collected} tickers`);
+          } else {
+            setCollectMsg(collectRes?.error || "TWS non connecte — les donnees seront disponibles au prochain demarrage avec TWS");
+          }
+        } catch {
+          setCollectMsg("TWS non connecte — les donnees seront disponibles au prochain demarrage avec TWS");
+        }
+      }
     } catch { }
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Auto-refresh every 30 min
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+        if (res && !res.error) {
+          const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+          if (fresh && !fresh.error) setData(fresh);
+        }
+      } catch { }
+    }, 30 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [load]);
 
   const collect = async () => {
     setCollecting(true);
+    setCollectMsg("");
     try {
       const res = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
-      if (!res.error) await load();
-      else alert("Erreur: " + res.error);
-    } catch (e: any) { alert("TWS non disponible"); }
+      if (!res.error) {
+        await load();
+        setCollectMsg(`Collecte reussie: ${res.tickers_collected} tickers`);
+      } else {
+        setCollectMsg(res.error);
+      }
+    } catch {
+      setCollectMsg("TWS non disponible");
+    }
     setCollecting(false);
+    setTimeout(() => setCollectMsg(""), 5000);
   };
 
   if (loading) return <div className="text-center py-20 text-[#6B6B75]">Chargement Vol Desk...</div>;
@@ -75,7 +114,7 @@ function VolDeskLiveTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={collect}
           disabled={collecting}
@@ -83,6 +122,11 @@ function VolDeskLiveTab() {
         >
           {collecting ? "Collecte en cours..." : "Collecter Snapshot TWS"}
         </button>
+        {collectMsg && (
+          <span className={`text-xs px-3 py-1 rounded-lg ${collectMsg.includes("reussie") ? "bg-[#22C55E15] text-[#22C55E]" : "bg-[#FFA72615] text-[#FFA726]"}`}>
+            {collectMsg}
+          </span>
+        )}
         {data?.date && (
           <span className="text-xs text-[#6B6B75]">
             Dernier snapshot: <span className="text-white font-mono">{data.date} {data.time?.slice(0, 5)}</span>
