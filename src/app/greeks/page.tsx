@@ -157,19 +157,17 @@ function TotalGexTab() {
         </Card>
       </div>
 
-      {/* GEX vs Price */}
+      {/* GTS — Gamma Trend Score */}
       <Card className="p-4">
-        <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-3">Total GEX vs Prix ES</div>
-        <ResponsiveContainer width="100%" height={300}>
+        <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-3">GTS (Gamma Trend Score) — Evolution</div>
+        <ResponsiveContainer width="100%" height={250}>
           <ComposedChart data={time_series}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
             <XAxis dataKey="time" tick={{ fill: "#6B6B75", fontSize: 9 }} interval="preserveStartEnd" />
-            <YAxis yAxisId="gex" tick={{ fill: "#FF6B00", fontSize: 10 }} />
-            <YAxis yAxisId="price" orientation="right" tick={{ fill: "#42A5F5", fontSize: 10 }} domain={["auto", "auto"]} />
+            <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
             <Tooltip content={darkTooltip} />
-            <ReferenceLine yAxisId="gex" y={0} stroke="#6B6B75" strokeDasharray="4 4" />
-            <Area yAxisId="gex" dataKey="total_gex" fill="#FF6B0010" stroke="#FF6B00" strokeWidth={1.5} name="Total GEX" dot={false} />
-            <Line yAxisId="price" dataKey="price" stroke="#42A5F5" strokeWidth={1} name="Prix ES" dot={false} />
+            <ReferenceLine y={0} stroke="#6B6B75" strokeDasharray="4 4" />
+            <Area dataKey="gts" fill="#42A5F515" stroke="#42A5F5" strokeWidth={1.5} name="GTS" dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </Card>
