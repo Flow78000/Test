@@ -203,6 +203,31 @@ export default function CentralBanksPage() {
         ))}
       </div>
 
+      {/* Real Rates & TIPS */}
+      <Card className="p-5 mb-6">
+        <h3 className="text-xs text-[#6B6B75] uppercase tracking-widest mb-4">Taux Reels & TIPS — Impact sur les Actifs</h3>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="bg-[#0A0A0E] rounded-lg p-4 text-center">
+            <div className="text-[10px] text-[#6B6B75] uppercase mb-1">Taux Reel US 10Y</div>
+            <div className="text-xl font-extrabold font-mono text-[#FFA726]">+2.15%</div>
+            <div className="text-[10px] text-[#6B6B75] mt-1">Nominal 4.35% - Breakeven 2.20%</div>
+          </div>
+          <div className="bg-[#0A0A0E] rounded-lg p-4 text-center">
+            <div className="text-[10px] text-[#6B6B75] uppercase mb-1">Breakeven Inflation 10Y</div>
+            <div className="text-xl font-extrabold font-mono text-[#42A5F5]">2.20%</div>
+            <div className="text-[10px] text-[#6B6B75] mt-1">Anticipation inflation marche</div>
+          </div>
+          <div className="bg-[#0A0A0E] rounded-lg p-4 text-center">
+            <div className="text-[10px] text-[#6B6B75] uppercase mb-1">Impact Gold</div>
+            <div className="text-xl font-extrabold font-mono text-[#FFD54F]">Or ∝ −Taux Reels</div>
+            <div className="text-[10px] text-[#6B6B75] mt-1">Taux reels hauts = pression sur l'or</div>
+          </div>
+        </div>
+        <div className="bg-[#FF6B0008] border border-[#FF6B0022] rounded-lg p-3 text-xs text-[#6B6B75] leading-relaxed">
+          <span className="font-bold text-[#FF6B00]">Lecture :</span> Taux reel = Taux nominal - Inflation anticipee (TIPS). Quand les taux reels montent, le cout d'opportunite de detenir de l'or (sans rendement) augmente → pression baissiere sur XAU. Quand les taux reels baissent → or attractif.
+        </div>
+      </Card>
+
       {/* Fed Speakers Table */}
       <Card className="p-5 mb-6">
         <h3 className="text-xs text-[#6B6B75] uppercase tracking-widest mb-4">Fed Speakers — Evenements a venir</h3>
