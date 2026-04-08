@@ -54,8 +54,21 @@ export default function EarningsPage() {
         fetch(`${API}/api/uw/earnings/premarket`).then(r => r.json()),
         fetch(`${API}/api/uw/earnings/afterhours`).then(r => r.json()),
       ]);
-      setPre(Array.isArray(pRes) ? pRes : pRes?.data ?? []);
-      setPost(Array.isArray(aRes) ? aRes : aRes?.data ?? []);
+      const mapEarning = (e: any): Earning => ({
+        ticker: e.symbol || e.ticker || "",
+        name: e.full_name || e.name || "",
+        sector: e.sector || "",
+        expected_move: e.expected_move_perc ? parseFloat(e.expected_move_perc) * 100 : (e.expected_move ? parseFloat(e.expected_move) : undefined),
+        eps_estimate: e.street_mean_est ? parseFloat(e.street_mean_est) : undefined,
+        market_cap: e.marketcap ? parseFloat(e.marketcap) : undefined,
+        time: e.report_time || "",
+        is_sp500: e.is_s_p_500 || e.is_sp500 || false,
+        date: e.report_date || e.date || "",
+      });
+      const pData = Array.isArray(pRes) ? pRes : pRes?.data ?? [];
+      const aData = Array.isArray(aRes) ? aRes : aRes?.data ?? [];
+      setPre(pData.map(mapEarning));
+      setPost(aData.map(mapEarning));
     } catch (e: any) { setError(e.message || "Serveur indisponible"); }
     setLoading(false);
   }, []);

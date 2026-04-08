@@ -132,6 +132,15 @@ function ivColor(iv: number, avg: number): string {
   return "#A0A0A8";
 }
 
+/** Return delta marker label + color based on distance from ATM */
+function getDeltaMarker(strikeIndex: number, atmIndex: number): { label: string; color: string } | null {
+  const dist = Math.abs(strikeIndex - atmIndex);
+  if (dist === 0) return { label: "\u039450", color: "#FF6B00" };
+  if (dist >= 3 && dist <= 5) return { label: "\u039425", color: "#FFA726" };
+  if (dist >= 8 && dist <= 12) return { label: "\u039410", color: "#6B6B75" };
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -294,8 +303,45 @@ export default function ChainPage() {
     const allStrikes = rows.map((r) => r.strike).sort((a, b) => a - b);
     const atm = allStrikes.length ? allStrikes[Math.floor(allStrikes.length / 2)] : 0;
 
-    return { avgIvC, avgIvP, skew: avgIvP - avgIvC, pcRatio, atm, totalCallVol, totalPutVol };
+    // VRP Estimate: (avgIvC + avgIvP) / 2 - 15% baseline HV
+    const vrp = ((avgIvC + avgIvP) / 2) * 100 - 15;
+
+    // Delta 25 Call: find the call strike closest to 0.25 delta
+    let delta25Call = 0;
+    let minDist25C = Infinity;
+    for (const c of calls) {
+      const dist = Math.abs(c.delta - 0.25);
+      if (dist < minDist25C) { minDist25C = dist; delta25Call = c.strike; }
+    }
+
+    // Delta 25 Put: find the put strike closest to -0.25 delta
+    let delta25Put = 0;
+    let minDist25P = Infinity;
+    for (const p of puts) {
+      const dist = Math.abs(p.delta - (-0.25));
+      if (dist < minDist25P) { minDist25P = dist; delta25Put = p.strike; }
+    }
+
+    // Max Pain: strike with the highest total OI (calls + puts)
+    let maxPain = 0;
+    let maxPainOI = 0;
+    const oiByStrike = new Map<number, number>();
+    for (const c of contracts) {
+      const cur = oiByStrike.get(c.strike) || 0;
+      oiByStrike.set(c.strike, cur + c.open_interest);
+    }
+    for (const [strike, oi] of oiByStrike) {
+      if (oi > maxPainOI) { maxPainOI = oi; maxPain = strike; }
+    }
+
+    return { avgIvC, avgIvP, skew: avgIvP - avgIvC, pcRatio, atm, totalCallVol, totalPutVol, vrp, delta25Call, delta25Put, maxPain };
   }, [contracts, rows]);
+
+  // ATM index for delta markers
+  const atmIndex = useMemo(() => {
+    const idx = rows.findIndex((r) => r.strike === stats.atm);
+    return idx >= 0 ? idx : Math.floor(rows.length / 2);
+  }, [rows, stats.atm]);
 
   // Max GEX for bar scaling
   const maxAbsGex = useMemo(() => {
@@ -359,13 +405,20 @@ export default function ChainPage() {
         </Card>
       ) : (
         <>
-          {/* KPI Row */}
-          <div className="grid grid-cols-5 gap-3 mb-4">
+          {/* KPI Row 1 */}
+          <div className="grid grid-cols-4 gap-3 mb-3">
             <KpiCard label="IV Moy Calls" value={fmt(stats.avgIvC * 100, 1) + "%"} color="#22C55E" />
             <KpiCard label="IV Moy Puts" value={fmt(stats.avgIvP * 100, 1) + "%"} color="#EF4444" />
             <KpiCard label="Skew P-C" value={fmt(stats.skew * 100, 2)} color="#FFA726" />
             <KpiCard label="P/C Ratio" value={fmt(stats.pcRatio, 2)} color={stats.pcRatio > 1 ? "#EF4444" : "#22C55E"} />
-            <KpiCard label="ATM Strike" value={stats.atm.toLocaleString()} color="#FF6B00" />
+          </div>
+
+          {/* KPI Row 2 */}
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <KpiCard label="VRP Estimate" value={fmt(stats.vrp, 1) + "%"} color={stats.vrp > 0 ? "#22C55E" : "#EF4444"} />
+            <KpiCard label="Delta 25 Call" value={stats.delta25Call ? stats.delta25Call.toLocaleString() : "—"} color="#22C55E" />
+            <KpiCard label="Delta 25 Put" value={stats.delta25Put ? stats.delta25Put.toLocaleString() : "—"} color="#EF4444" />
+            <KpiCard label="Max Pain" value={stats.maxPain ? stats.maxPain.toLocaleString() : "—"} color="#FF6B00" />
           </div>
 
           {/* GEX Level Cards */}
@@ -428,12 +481,13 @@ export default function ChainPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
+                {rows.map((row, rowIdx) => {
                   const isAtm = row.strike === stats.atm;
                   const c = row.call;
                   const p = row.put;
                   const callVolSpike = c && c.open_interest > 0 && c.volume > 2 * c.open_interest;
                   const putVolSpike = p && p.open_interest > 0 && p.volume > 2 * p.open_interest;
+                  const deltaMarker = getDeltaMarker(rowIdx, atmIndex);
 
                   return (
                     <tr
@@ -474,13 +528,23 @@ export default function ChainPage() {
                         </>
                       )}
 
-                      {/* STRIKE */}
+                      {/* STRIKE + Delta Marker */}
                       <td
                         className={`px-2 py-1 text-center font-bold bg-[#1A1A1E] ${
                           isAtm ? "text-[#FF6B00] text-sm" : "text-[#E0E0E5]"
                         }`}
                       >
-                        {row.strike.toLocaleString()}
+                        <div className="flex items-center justify-center gap-1.5">
+                          {deltaMarker && (
+                            <span
+                              className="text-[8px] font-semibold px-1 py-0.5 rounded"
+                              style={{ color: deltaMarker.color, backgroundColor: `${deltaMarker.color}15` }}
+                            >
+                              {deltaMarker.label}
+                            </span>
+                          )}
+                          <span>{row.strike.toLocaleString()}</span>
+                        </div>
                       </td>
 
                       {/* PUTS side */}
@@ -527,12 +591,6 @@ export default function ChainPage() {
               </tbody>
             </table>
           </Card>
-
-          {/* Footer info */}
-          <div className="flex items-center justify-between mt-3 text-[10px] text-[#6B6B75]">
-            <span>{contracts.length} contrats | {rows.length} strikes affiches</span>
-            <span>Actualisation auto 60s</span>
-          </div>
         </>
       )}
     </div>

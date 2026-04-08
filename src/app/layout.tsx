@@ -24,7 +24,7 @@ export default function RootLayout({
           {/* Top Navigation Bar */}
           <nav className="bg-[#111114] border-b border-[#1E1E22] flex-shrink-0">
             {/* Row 1: Logo + Main tabs */}
-            <div className="flex items-center gap-0.5 px-5 h-16">
+            <div className="flex items-center gap-0 px-4 h-12">
               {/* Logo */}
               <a href="/" className="flex items-center gap-1 pr-6 border-r border-[#1E1E22] mr-2">
                 <span className="text-base font-extrabold tracking-tight">
@@ -32,31 +32,26 @@ export default function RootLayout({
                 </span>
               </a>
               {/* Main nav tabs */}
-              <NavTab href="/" label="Dashboard" />
-              <NavTab href="/chain" label="Vol Chain" badge="LIVE" />
+              <NavTab href="/" label="Dash" />
+              <NavTab href="/chain" label="Chain" badge="LIVE" />
               <NavTab href="/flow" label="Flow" badge="LIVE" />
-              <NavTab href="/greeks" label="Greeks" badge="LIVE" />
+              <NavTab href="/greeks" label="GEX" badge="LIVE" />
               <NavTab href="/regime" label="Regime" badge="LIVE" />
               <NavTab href="/signals" label="Signaux" badge="LIVE" />
-              <span className="w-px h-5 bg-[#1E1E22] mx-1" />
-              <NavTab href="/vol-desk" label="Vol Desk" />
-              <NavTab href="/term-structure" label="Term Struct." />
-              <NavTab href="/vol-cone" label="Vol Cone" />
+              <span className="w-px h-4 bg-[#1E1E22] mx-0.5" />
+              <NavTab href="/vol-desk" label="Vol" />
+              <NavTab href="/vol-cone" label="Cone" />
+              <NavTab href="/term-structure" label="TS" />
               <NavTab href="/range-dashboard" label="Ranges" />
-              <span className="w-px h-5 bg-[#1E1E22] mx-1" />
-              <NavTab href="/heatmap" label="Heatmap" />
+              <span className="w-px h-4 bg-[#1E1E22] mx-0.5" />
+              <NavTab href="/heatmap" label="Sectors" />
               <NavTab href="/news" label="News" badge="LIVE" />
-              <NavTab href="/earnings" label="Earnings" />
-              <NavTab href="/calendrier" label="Calendrier" />
-              <span className="w-px h-5 bg-[#1E1E22] mx-1" />
-              <NavTab href="/academie" label="Academie" />
-              <NavTab href="/academie/taux" label="06 — Taux" />
-              <NavTab href="/academie/term-structure-iv" label="07 — TS Vol" />
-              <NavTab href="/academie/term-structure-futures" label="08 — TS Futures" />
-              <NavTab href="/academie/regimes" label="09 — Regimes" />
-              <NavTab href="/academie/spread-trading" label="10 — Spreads" />
-              <NavTab href="/vol-map" label="Vol Map" />
-              <NavTab href="/spread-calc" label="Calc" />
+              <NavTab href="/earnings" label="Earn." />
+              <NavTab href="/calendrier" label="Cal." />
+              <NavTab href="/central-banks" label="CB" />
+              <span className="w-px h-4 bg-[#1E1E22] mx-0.5" />
+              <NavTab href="/vol-map" label="Map" />
+              <NavTab href="/academie" label="Acad." />
               {/* Status */}
               <div className="ml-auto flex items-center gap-2 text-[10px] text-[#6B6B75]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
@@ -78,7 +73,7 @@ function NavTab({ href, label, badge }: { href: string; label: string; badge?: s
   return (
     <a
       href={href}
-      className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-medium text-[#6B6B75] hover:text-[#F0F0F0] hover:bg-[#1A1A1E] transition-colors rounded whitespace-nowrap"
+      className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-[#6B6B75] hover:text-[#F0F0F0] hover:bg-[#1A1A1E] border border-transparent hover:border-[#2A2A30] transition-all rounded-md whitespace-nowrap"
     >
       <span>{label}</span>
       {badge && (
