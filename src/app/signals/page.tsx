@@ -47,7 +47,7 @@ export default function SignalsPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Signaux Sierra Chart" subtitle="Mean Reversion + Vol Synthetique — 12 actifs">
+      <PageHeader title="Signaux Quantitatifs" subtitle="Mean Reversion + Vol Synthetique — 12 actifs">
         <button onClick={loadSignals} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
           Rafraichir
         </button>
@@ -194,12 +194,12 @@ export default function SignalsPage() {
               <div className="bg-[#0A0A0E] rounded-lg p-3">
                 <div className="text-[10px] text-[#6B6B75] uppercase mb-1">VXX Sigma</div>
                 <div className="text-lg font-extrabold font-mono text-[#FFA726]">En attente</div>
-                <div className="text-[9px] text-[#6B6B75] mt-1">Sierra: VXX-NQTV-BarStudyData.csv</div>
+                <div className="text-[9px] text-[#6B6B75] mt-1">Source: VXX vol synthetique</div>
               </div>
               <div className="bg-[#0A0A0E] rounded-lg p-3">
                 <div className="text-[10px] text-[#6B6B75] uppercase mb-1">SPXS Sigma</div>
                 <div className="text-lg font-extrabold font-mono text-[#FFA726]">En attente</div>
-                <div className="text-[9px] text-[#6B6B75] mt-1">Sierra: SPXS-NQTV-BarStudyData.csv</div>
+                <div className="text-[9px] text-[#6B6B75] mt-1">Source: SPXS vol synthetique</div>
               </div>
             </div>
             <div className="mt-3 bg-[#FF6B0008] border border-[#FF6B0022] rounded-lg p-3 text-xs text-[#6B6B75]">
