@@ -66,12 +66,18 @@ def news():
     return uw_fetch("/news/headlines")
 
 @router.get("/earnings/premarket")
-def earnings_pre():
-    return uw_fetch("/earnings/premarket")
+def earnings_pre(date: str = ""):
+    ep = "/earnings/premarket"
+    if date:
+        ep += f"?date={date}"
+    return uw_fetch(ep)
 
 @router.get("/earnings/afterhours")
-def earnings_post():
-    return uw_fetch("/earnings/afterhours")
+def earnings_post(date: str = ""):
+    ep = "/earnings/afterhours"
+    if date:
+        ep += f"?date={date}"
+    return uw_fetch(ep)
 
 @router.get("/economic-calendar")
 def economic_calendar():

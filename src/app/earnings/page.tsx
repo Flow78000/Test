@@ -52,14 +52,22 @@ export default function EarningsPage() {
   const [sp500Only, setSp500Only] = useState(false);
   const [sortBy, setSortBy] = useState<"cap" | "move" | "time">("cap");
 
+  // Compute the 5 weekdays for the current week offset
+  const weekDays = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) + weekOffset * 7);
+    return Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d.toISOString().slice(0, 10);
+    });
+  }, [weekOffset]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [pRes, aRes] = await Promise.all([
-        fetch(`${API}/api/uw/earnings/premarket`).then(r => r.json()),
-        fetch(`${API}/api/uw/earnings/afterhours`).then(r => r.json()),
-      ]);
       const mapEarning = (e: any): Earning => ({
         ticker: e.symbol || e.ticker || "",
         name: e.full_name || e.name || "",
@@ -71,13 +79,28 @@ export default function EarningsPage() {
         is_sp500: e.is_s_p_500 || e.is_sp500 || false,
         date: e.report_date || e.date || "",
       });
-      const pData = Array.isArray(pRes) ? pRes : pRes?.data ?? [];
-      const aData = Array.isArray(aRes) ? aRes : aRes?.data ?? [];
-      setPre(pData.map(mapEarning));
-      setPost(aData.map(mapEarning));
+
+      // Fetch ALL 5 days of the week (both pre and post for each day)
+      const allPre: Earning[] = [];
+      const allPost: Earning[] = [];
+
+      const fetches = weekDays.flatMap(date => [
+        fetch(`${API}/api/uw/earnings/premarket?date=${date}`).then(r => r.json()).then(json => {
+          const items = Array.isArray(json) ? json : json?.data ?? [];
+          items.forEach((e: any) => allPre.push(mapEarning(e)));
+        }).catch(() => {}),
+        fetch(`${API}/api/uw/earnings/afterhours?date=${date}`).then(r => r.json()).then(json => {
+          const items = Array.isArray(json) ? json : json?.data ?? [];
+          items.forEach((e: any) => allPost.push(mapEarning(e)));
+        }).catch(() => {}),
+      ]);
+
+      await Promise.all(fetches);
+      setPre(allPre);
+      setPost(allPost);
     } catch (e: any) { setError(e.message || "Serveur indisponible"); }
     setLoading(false);
-  }, []);
+  }, [weekDays]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -95,14 +118,7 @@ export default function EarningsPage() {
     return filtered;
   }, [pre, post, sp500Only, sortBy]);
 
-  const ws = weekStart(weekOffset);
-  const weekDates = Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(ws);
-    d.setDate(d.getDate() + i);
-    return isoDate(d);
-  });
-
-  const byDay = weekDates.map(date => all.filter(e => e.date === date));
+  const byDay = weekDays.map(date => all.filter(e => e.date === date));
   const totalCount = all.length;
   const sp500Count = all.filter(e => e.is_sp500).length;
   const totalCap = all.reduce((s, e) => s + (e.market_cap || 0), 0);
@@ -156,12 +172,12 @@ export default function EarningsPage() {
         <button onClick={() => setWeekOffset(w => w + 1)} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
           Sem. suiv. →
         </button>
-        <span className="text-xs text-[#6B6B75] ml-2">{weekDates[0]} au {weekDates[4]}</span>
+        <span className="text-xs text-[#6B6B75] ml-2">{weekDays[0]} au {weekDays[4]}</span>
       </div>
 
       {/* 5-column grid */}
       <div className="grid grid-cols-5 gap-3">
-        {weekDates.map((date, di) => {
+        {weekDays.map((date, di) => {
           const daySp500 = byDay[di].filter(e => e.is_sp500).length;
           const impact = dailyImpactLabel(daySp500);
           return (
