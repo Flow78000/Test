@@ -39,8 +39,8 @@ function darkTooltip({ active, payload, label }: any) {
   return (
     <div className="bg-[#111114] border border-[#2A2A2E] rounded-lg px-4 py-3 text-xs shadow-xl">
       <div className="text-[#FF6B00] font-bold mb-2">{label}</div>
-      {payload.filter((p: any) => p.value != null).map((p: any) => (
-        <div key={p.dataKey} className="flex justify-between gap-4" style={{ color: p.color || p.stroke }}>
+      {payload.filter((p: any) => p.value != null).map((p: any, i: number) => (
+        <div key={`${p.dataKey}-${i}`} className="flex justify-between gap-4" style={{ color: p.color || p.stroke }}>
           <span>{p.name}</span>
           <span className="font-mono font-bold">{(Number(p.value) * 100).toFixed(1)}%</span>
         </div>
