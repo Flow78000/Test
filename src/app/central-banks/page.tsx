@@ -77,6 +77,12 @@ const BANKS: CentralBank[] = [
     lastDecisionDate: "2026-02-18", lastDecision: "cut",
     nextMeeting: "2026-04-01", stance: "neutral", currency: "AUD",
   },
+  {
+    name: "People's Bank of China", flag: "\uD83C\uDDE8\uD83C\uDDF3", code: "PBOC",
+    rate: 3.10, rateStr: "3.10%",
+    lastDecisionDate: "2026-03-20", lastDecision: "hold",
+    nextMeeting: "2026-04-21", stance: "dovish", currency: "CNY",
+  },
 ];
 
 // Extended rate history — 3+ decisions per bank for dot plot
@@ -114,6 +120,11 @@ const RATE_HISTORY: RateDecision[] = [
   { date: "2026-02-18", bank: "RBA", decision: "Cut -25bps", rate: 4.10, rateStr: "4.10%", surprise: false },
   { date: "2025-12-10", bank: "RBA", decision: "Hold", rate: 4.35, rateStr: "4.35%", surprise: false },
   { date: "2025-11-05", bank: "RBA", decision: "Hold", rate: 4.35, rateStr: "4.35%", surprise: false },
+  // PBOC
+  { date: "2026-03-20", bank: "PBOC", decision: "Hold", rate: 3.10, rateStr: "3.10%", surprise: false },
+  { date: "2026-02-20", bank: "PBOC", decision: "Cut -10bps", rate: 3.10, rateStr: "3.10%", surprise: false },
+  { date: "2025-10-21", bank: "PBOC", decision: "Cut -25bps", rate: 3.20, rateStr: "3.20%", surprise: true },
+  { date: "2025-07-22", bank: "PBOC", decision: "Cut -10bps", rate: 3.45, rateStr: "3.45%", surprise: false },
 ];
 
 const DECISION_COLORS: Record<string, string> = { hike: "#EF4444", hold: "#FFA726", cut: "#22C55E" };
@@ -239,7 +250,7 @@ export default function CentralBanksPage() {
       />
 
       {/* Top KPIs — Next meetings countdown */}
-      <div className="grid grid-cols-4 md:grid-cols-7 gap-3 mb-4">
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-3 mb-4">
         {BANKS.map(b => {
           const days = daysUntil(b.nextMeeting);
           const isPast = days < 0;
