@@ -25,7 +25,7 @@ const TIMEFRAMES: Record<string, { windows: number[]; labels: Record<number,stri
   },
   "daily": {
     windows: [3,5,7,10,14,21,30,42,63,90,126,180,252],
-    labels: {3:"3J",5:"1S",7:"7J",10:"2S",14:"2S",21:"1M",30:"30J",42:"6S",63:"3M",90:"90J",126:"6M",180:"9M",252:"1A"}
+    labels: {3:"3J",5:"1S",7:"7J",10:"10J",14:"2S",21:"1M",30:"30J",42:"6S",63:"3M",90:"90J",126:"6M",180:"9M",252:"1A"}
   },
   "weekly": {
     windows: [2,4,8,13,26,52],
@@ -309,7 +309,7 @@ export default function VolConePage() {
               const statusColor = r.pctile > 0.90 ? "#EF4444" : r.pctile > 0.75 ? "#FF6B00" : r.pctile > 0.25 ? "#22C55E" : "#42A5F5";
               const statusLabel = r.pctile > 0.90 ? "EXTREME" : r.pctile > 0.75 ? "ELEVE" : r.pctile > 0.25 ? "NORMAL" : "BAS";
               return (
-                <tr key={r.window} className="border-b border-[#1A1A1E] hover:bg-[#FF6B0006]">
+                <tr key={`${r.window}-${r.wDays}`} className="border-b border-[#1A1A1E] hover:bg-[#FF6B0006]">
                   <td className="px-3 py-2 font-mono font-bold text-[#FF6B00]">{r.window}</td>
                   <td className="px-3 py-2 font-mono text-[#EF4444]">{pctFmt(r.min)}</td>
                   <td className="px-3 py-2 font-mono text-[#EF444488]">{pctFmt(r.p10)}</td>
