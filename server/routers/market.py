@@ -78,20 +78,12 @@ def vol_desk_sectors(days: int = 30):
 
 @router.get("/dividends")
 def dividends(tickers: str = ""):
-    """Fetch dividend data for a comma-separated list of tickers.
-    Uses TWS if connected, otherwise returns cached data."""
+    """Fetch dividend data via yfinance (no TWS required).
+    Results cached 24h."""
     ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()] if tickers else []
     if not ticker_list:
         return get_all_cached()
-    if ib_connected and ib and ib.isConnected():
-        return fetch_dividends_batch(ib, ticker_list)
-    # Return cached only
-    result = {}
-    for t in ticker_list:
-        cached = get_cached_dividend(t)
-        if cached:
-            result[t] = cached
-    return result
+    return fetch_dividends_batch(None, ticker_list)
 
 @router.get("/vol-desk/universe")
 def vol_desk_universe():

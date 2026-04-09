@@ -237,6 +237,7 @@ export default function EarningsPage() {
                 return {
                   ...earning,
                   div_yield: div.div_yield ?? earning.div_yield,
+                  div_ex_date: div.ex_date ?? earning.div_ex_date,
                   has_options: div.has_options ?? earning.has_options,
                   price: div.price ?? earning.price,
                 };

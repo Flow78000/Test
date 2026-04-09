@@ -85,10 +85,10 @@ export default function CalendrierPage() {
   const byDay = useMemo(() => {
     return weekDates.map(date =>
       events
-        .filter((ev: any) => (ev.date || ev.datetime || "").slice(0, 10) === date)
+        .filter((ev: any) => (ev.time || ev.date || ev.datetime || "").slice(0, 10) === date)
         .sort((a: any, b: any) => {
-          const ta = new Date(a.date || a.datetime || 0).getTime();
-          const tb = new Date(b.date || b.datetime || 0).getTime();
+          const ta = new Date(a.time || a.date || a.datetime || 0).getTime();
+          const tb = new Date(b.time || b.date || b.datetime || 0).getTime();
           return ta - tb;
         })
     );
@@ -163,7 +163,7 @@ export default function CalendrierPage() {
                 {byDay[di].length === 0 ? (
                   <div className="text-center text-[10px] text-[#6B6B75]/50 py-6">Aucun evenement</div>
                 ) : byDay[di].map((ev: any, i: number) => {
-                  const name = ev.name || ev.event || "";
+                  const name = ev.event || ev.name || "";
                   const imp = impactOf(name, ev.impact);
                   const fed = isFedSpeaker(name);
                   const critical = isCriticalFull(name);
@@ -175,7 +175,7 @@ export default function CalendrierPage() {
                     return (
                       <div key={i} className={`rounded-lg border p-2.5 ${bg}`}>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-[10px] text-[#6B6B75] font-mono">{fmtTime(ev.date || ev.datetime || "", tz)}</span>
+                          <span className="text-[10px] text-[#6B6B75] font-mono">{fmtTime(ev.time || ev.date || ev.datetime || "", tz)}</span>
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase animate-pulse"
                             style={{ background: `${imp.color}22`, color: imp.color }}>
                             {imp.label}
@@ -183,7 +183,7 @@ export default function CalendrierPage() {
                         </div>
                         <div className={`text-xs font-semibold leading-snug ${textCol}`}>{name}</div>
                         <div className="flex items-center gap-2 mt-1.5 text-[10px]">
-                          {ev.previous != null && <span className="text-[#6B6B75]">Prev <span className="text-white">{ev.previous}</span></span>}
+                          {(ev.prev || ev.previous) != null && <span className="text-[#6B6B75]">Prev <span className="text-white">{ev.prev || ev.previous}</span></span>}
                           {ev.forecast != null && <span className="text-[#6B6B75]">Est <span className="text-[#FFB300]">{ev.forecast}</span></span>}
                           {ev.actual != null && <span className="text-[#6B6B75]">Reel <span className="text-white font-bold">{ev.actual}</span></span>}
                         </div>
@@ -196,12 +196,12 @@ export default function CalendrierPage() {
                     return (
                       <div key={i} className="rounded-lg border border-[#AB47BC]/30 bg-[#AB47BC]/5 p-2.5">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-[10px] text-[#6B6B75] font-mono">{fmtTime(ev.date || ev.datetime || "", tz)}</span>
+                          <span className="text-[10px] text-[#6B6B75] font-mono">{fmtTime(ev.time || ev.date || ev.datetime || "", tz)}</span>
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[#AB47BC]/20 text-[#AB47BC]">FED</span>
                         </div>
                         <div className="text-xs leading-snug text-[#AB47BC]">{name}</div>
                         <div className="flex items-center gap-2 mt-1.5 text-[10px]">
-                          {ev.previous != null && <span className="text-[#6B6B75]">Prev <span className="text-white">{ev.previous}</span></span>}
+                          {(ev.prev || ev.previous) != null && <span className="text-[#6B6B75]">Prev <span className="text-white">{ev.prev || ev.previous}</span></span>}
                           {ev.forecast != null && <span className="text-[#6B6B75]">Est <span className="text-[#FFB300]">{ev.forecast}</span></span>}
                           {ev.actual != null && <span className="text-[#6B6B75]">Reel <span className="text-white font-bold">{ev.actual}</span></span>}
                         </div>
@@ -213,7 +213,7 @@ export default function CalendrierPage() {
                   return (
                     <div key={i} className="rounded-lg border border-[#1E1E22] bg-[#111114] p-2.5 hover:border-[#2A2A30] transition-colors">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-[10px] text-[#6B6B75] font-mono">{fmtTime(ev.date || ev.datetime || "", tz)}</span>
+                        <span className="text-[10px] text-[#6B6B75] font-mono">{fmtTime(ev.time || ev.date || ev.datetime || "", tz)}</span>
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
                           style={{ background: `${imp.color}22`, color: imp.color, border: `1px solid ${imp.color}44` }}>
                           {imp.label}
@@ -221,7 +221,7 @@ export default function CalendrierPage() {
                       </div>
                       <div className="text-xs leading-snug text-[#B0B0B8]">{name}</div>
                       <div className="flex items-center gap-2 mt-1.5 text-[10px]">
-                        {ev.previous != null && <span className="text-[#6B6B75]">Prev <span className="text-white">{ev.previous}</span></span>}
+                        {(ev.prev || ev.previous) != null && <span className="text-[#6B6B75]">Prev <span className="text-white">{ev.prev || ev.previous}</span></span>}
                         {ev.forecast != null && <span className="text-[#6B6B75]">Est <span className="text-[#FFB300]">{ev.forecast}</span></span>}
                         {ev.actual != null && <span className="text-[#6B6B75]">Reel <span className="text-white font-bold">{ev.actual}</span></span>}
                       </div>

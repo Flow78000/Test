@@ -1,13 +1,12 @@
 """
-FLO.W — Dividend Data Cache
-Fetches dividend yield and ex-date from TWS for a list of tickers.
-Caches results to avoid repeated slow API calls.
+FLO.W — Dividend Data via yfinance (no TWS required)
+Fetches dividend yield, rate, ex-date for any ticker.
+Caches results 24h to avoid repeated API calls.
 """
 import os
 import json
 import time
 from datetime import datetime, timezone
-from ib_insync import Stock
 
 CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dividend_cache.json")
 CACHE_TTL = 86400  # 24 hours
@@ -39,13 +38,10 @@ def get_cached_dividend(ticker):
     return None
 
 
-def fetch_dividends_batch(ib, tickers):
-    """Fetch dividend info for a batch of tickers via TWS.
-    Uses reqMktData with generic tick 456 (dividend info).
-    Returns dict of ticker -> {div_yield, ex_date, div_amount}
-    """
-    if not ib or not ib.isConnected():
-        return {}
+def fetch_dividends_batch(ib_unused, tickers):
+    """Fetch dividend info via yfinance for a batch of tickers.
+    ib parameter kept for compatibility but not used."""
+    import yfinance as yf
 
     cache = _load_cache()
     results = {}
@@ -62,78 +58,43 @@ def fetch_dividends_batch(ib, tickers):
     if not to_fetch:
         return results
 
-    # Qualify and request market data for uncached tickers
-    contracts = {}
-    for ticker in to_fetch[:20]:  # Limit batch to 20 to avoid TWS throttling
+    # Fetch via yfinance (batch — max 20 to avoid throttling)
+    for ticker in to_fetch[:20]:
         try:
-            c = Stock(ticker, "SMART", "USD")
-            qualified = ib.qualifyContracts(c)
-            if qualified:
-                contracts[ticker] = qualified[0]
-        except:
-            pass
+            t = yf.Ticker(ticker)
+            info = t.info or {}
 
-    if not contracts:
-        return results
+            div_yield = info.get("dividendYield")
+            if div_yield and div_yield > 0:
+                div_yield = round(div_yield * 100 if div_yield < 1 else div_yield, 2)
+            else:
+                div_yield = None
 
-    # Request with generic ticks: 456 = dividends
-    ticker_map = {}
-    for ticker, contract in contracts.items():
-        try:
-            ticker_map[ticker] = ib.reqMktData(contract, genericTickList="456", snapshot=True, regulatorySnapshot=False)
-        except:
-            pass
+            div_rate = info.get("dividendRate")
+            ex_date_ts = info.get("exDividendDate")
+            ex_date = None
+            if ex_date_ts and isinstance(ex_date_ts, (int, float)):
+                try:
+                    ex_date = datetime.fromtimestamp(ex_date_ts).strftime("%Y-%m-%d")
+                except:
+                    pass
 
-    ib.sleep(4)
-
-    # Extract dividend data
-    for ticker, t in ticker_map.items():
-        try:
-            # Dividend data comes in the dividends field
-            div_data = getattr(t, 'dividends', None)
-            last_div = getattr(t, 'lastDividendDate', None)
-
-            # Try fundamental ratios
-            fund = getattr(t, 'fundamentalRatios', None)
-
-            div_yield = None
-            div_amount = None
-
-            if div_data:
-                # div_data is a Dividends named tuple: past12Months, next12Months, nextDate, nextAmount
-                if hasattr(div_data, 'past12Months') and div_data.past12Months:
-                    div_amount = float(div_data.past12Months)
-                if hasattr(div_data, 'next12Months') and div_data.next12Months:
-                    div_amount = float(div_data.next12Months)
-
-            # Calculate yield from price
-            price = None
-            if t.last and t.last == t.last:
-                price = float(t.last)
-            elif t.close and t.close == t.close:
-                price = float(t.close)
-
-            if div_amount and price and price > 0:
-                div_yield = round(div_amount / price * 100, 2)
+            price = info.get("currentPrice") or info.get("regularMarketPrice")
+            has_options = info.get("options") is not None or True  # Most listed stocks have options
 
             entry = {
                 "div_yield": div_yield,
-                "div_amount": round(div_amount, 4) if div_amount else None,
-                "has_options": True,
-                "price": round(price, 2) if price else None,
+                "div_rate": round(div_rate, 4) if div_rate else None,
+                "ex_date": ex_date,
+                "has_options": has_options,
+                "price": round(float(price), 2) if price else None,
+                "has_dividend": div_yield is not None and div_yield > 0,
                 "_ts": time.time(),
             }
             results[ticker] = entry
             cache.setdefault("tickers", {})[ticker] = entry
-        except:
-            results[ticker] = {"div_yield": None, "div_amount": None, "has_options": True, "_ts": time.time()}
-
-    # Cancel market data
-    for ticker, contract in contracts.items():
-        try:
-            ib.cancelMktData(contract)
-        except:
-            pass
+        except Exception as e:
+            results[ticker] = {"div_yield": None, "has_dividend": False, "has_options": True, "_ts": time.time()}
 
     # Save cache
     cache["last_updated"] = datetime.now(timezone.utc).isoformat()
