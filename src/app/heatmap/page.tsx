@@ -3,16 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  AreaChart, Area, LineChart, Line, BarChart, Bar, ComposedChart,
+  XAxis, YAxis, CartesianGrid, ReferenceLine, Legend,
 } from "recharts";
 
 // ---------------------------------------------------------------------------
@@ -379,14 +372,22 @@ export default function HeatmapPage() {
 
   const dominantSentiment = summary.net >= 0 ? "BULL" : "BEAR";
 
-  // 60-day simulated rotation data
-  const rotationHistory = useMemo(() =>
-    Array.from({ length: 60 }, (_, i) => ({
-      day: i + 1,
-      cyclical: Math.round((Math.sin(i * 0.1) * 30 + 50 + Math.abs(Math.sin(i * 0.37)) * 20) * 10) / 10,
-      defensive: Math.round((Math.cos(i * 0.1) * 25 + 45 + Math.abs(Math.cos(i * 0.53)) * 15) * 10) / 10,
-    })),
-  []);
+  // Real rotation data from UW
+  const [rotationData, setRotationData] = useState<any>(null);
+  const [rotDays, setRotDays] = useState(60);
+  const [loadingRot, setLoadingRot] = useState(true);
+
+  useEffect(() => {
+    async function fetchRotation() {
+      setLoadingRot(true);
+      try {
+        const res = await fetch(`${API}/api/uw/sector-rotation?days=${rotDays}`).then(r => r.json());
+        if (res && !res.error) setRotationData(res);
+      } catch { }
+      setLoadingRot(false);
+    }
+    fetchRotation();
+  }, [rotDays]);
 
   return (
     <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
@@ -615,41 +616,126 @@ export default function HeatmapPage() {
             </div>
           </Card>
 
-          {/* 60-Day Rotation Chart */}
-          <Card className="p-5 mb-4">
-            <h3 className="text-xs text-[#6B6B75] uppercase tracking-widest mb-3">Rotation Cycliques vs Defensifs — 60 Jours</h3>
-            <div style={{ height: 280 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={rotationHistory}>
-                  <defs>
-                    <linearGradient id="gradCyclical" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FF6B00" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#FF6B00" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="gradDefensive" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#42A5F5" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#42A5F5" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
-                  <XAxis dataKey="day" tick={{ fill: "#6B6B75", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "#1E1E22" }} />
-                  <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "#1E1E22" }} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#1A1A1E", border: "1px solid #2A2A2E", borderRadius: 8, fontSize: 11 }}
-                    labelStyle={{ color: "#6B6B75" }}
-                    labelFormatter={(v) => `Jour ${v}`}
-                  />
-                  <Area type="monotone" dataKey="cyclical" stroke="#FF6B00" fill="url(#gradCyclical)" strokeWidth={2} name="Cycliques" />
-                  <Area type="monotone" dataKey="defensive" stroke="#42A5F5" fill="url(#gradDefensive)" strokeWidth={2} name="Defensifs" />
-                </AreaChart>
-              </ResponsiveContainer>
+          {/* ================================================================ */}
+          {/* ROTATION SECTORIELLE — DONNEES REELLES UW 250 JOURS           */}
+          {/* ================================================================ */}
+
+          {/* Period selector */}
+          <div className="flex items-center gap-2 mt-8 mb-3">
+            <span className="text-xs text-[#6B6B75] uppercase tracking-widest font-bold">Rotation Sectorielle</span>
+            <div className="flex gap-1 ml-3">
+              {[30, 60, 120, 250].map(d => (
+                <button key={d} onClick={() => setRotDays(d)}
+                  className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${rotDays === d ? "bg-[#FF6B00] text-black" : "bg-[#111114] text-[#6B6B75] hover:text-white border border-[#1E1E22]"}`}>
+                  {d}J
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-6 mt-2 text-[10px] text-[#6B6B75]">
-              <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#FF6B00] rounded" /> Cycliques (XLK, XLY, XLF, XLE)</div>
-              <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#42A5F5] rounded" /> Defensifs (XLP, XLU, XLV)</div>
-              <span className="ml-auto">Croisements = changements de regime potentiels</span>
-            </div>
-          </Card>
+            {loadingRot && <span className="text-[10px] text-[#6B6B75] ml-2 animate-pulse">Chargement UW...</span>}
+          </div>
+
+          {rotationData && (
+            <>
+              {/* 1. Spread net cycliques - defensifs (zone chart) */}
+              <Card className="p-4 mb-4">
+                <div className="text-[10px] text-[#6B6B75] uppercase tracking-widest mb-2">
+                  Spread Cycliques - Defensifs (base 100) — Au-dessus de 0 = Risk-On
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart data={rotationData.spread}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
+                    <XAxis dataKey="date" tick={{ fill: "#6B6B75", fontSize: 8 }} interval="preserveStartEnd" tickFormatter={(v: string) => v.slice(5)} />
+                    <YAxis tick={{ fill: "#6B6B75", fontSize: 9 }} />
+                    <Tooltip contentStyle={{ backgroundColor: "#1A1A1E", border: "1px solid #2A2A2E", borderRadius: 8, fontSize: 11 }}
+                      formatter={(v: any, name: any) => [`${Number(v).toFixed(2)}`, name === "spread" ? "Spread C-D" : name]} />
+                    <ReferenceLine y={0} stroke="#FF6B00" strokeWidth={1.5} />
+                    <Area dataKey="spread" stroke="#FF6B00" fill="#FF6B0015" strokeWidth={2} name="Spread C-D" dot={false}
+                      type="monotone" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+                <div className="flex items-center gap-4 mt-1 text-[9px] text-[#6B6B75]">
+                  <span><span className="text-[#22C55E] font-bold">Au-dessus</span> = cycliques surperforment (risk-on)</span>
+                  <span><span className="text-[#EF4444] font-bold">En-dessous</span> = defensifs surperforment (risk-off)</span>
+                </div>
+              </Card>
+
+              {/* 2. 10 secteurs en lignes individuelles (base 100) */}
+              <Card className="p-4 mb-4">
+                <div className="text-[10px] text-[#6B6B75] uppercase tracking-widest mb-2">
+                  Performance relative base 100 — {rotDays} jours — Chaque secteur
+                </div>
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
+                    <XAxis dataKey="date" tick={{ fill: "#6B6B75", fontSize: 8 }} interval="preserveStartEnd"
+                      tickFormatter={(v: string) => v.slice(5)} allowDuplicatedCategory={false} />
+                    <YAxis tick={{ fill: "#6B6B75", fontSize: 9 }} domain={["auto", "auto"]} />
+                    <Tooltip contentStyle={{ backgroundColor: "#1A1A1E", border: "1px solid #2A2A2E", borderRadius: 8, fontSize: 10 }}
+                      formatter={(v: any) => [`${Number(v).toFixed(1)}`, ""]} />
+                    <ReferenceLine y={100} stroke="#6B6B75" strokeDasharray="4 4" />
+                    {Object.entries(rotationData.sectors || {}).map(([ticker, series]: [string, any]) => {
+                      if (!series || !series.length) return null;
+                      const color = SECTOR_COLORS[ticker] || "#6B6B75";
+                      return (
+                        <Line key={ticker} data={series} dataKey="base100" stroke={color}
+                          strokeWidth={1.2} dot={false} name={ticker} type="monotone" />
+                      );
+                    })}
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* 3. Heatmap sectorielle jour par jour */}
+              <Card className="p-4 mb-4">
+                <div className="text-[10px] text-[#6B6B75] uppercase tracking-widest mb-2">
+                  Heatmap — Performance relative quotidienne (% vs base 100)
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="border-collapse" style={{ minWidth: Math.min(rotDays, 60) * 28 + 80 }}>
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 z-10 bg-[#0A0A0E] p-1 text-left text-[9px] text-[#6B6B75] border-b border-r border-[#1E1E22] w-16">ETF</th>
+                        {(rotationData.spread || []).slice(-Math.min(rotDays, 60)).map((s: any) => (
+                          <th key={s.date} className="p-0.5 text-center text-[7px] text-[#555] border-b border-[#1E1E22] min-w-[24px]">
+                            {s.date.slice(8)}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(rotationData.sectors || {}).map(([ticker, series]: [string, any]) => {
+                        if (!series || !series.length) return null;
+                        const recent = series.slice(-Math.min(rotDays, 60));
+                        return (
+                          <tr key={ticker}>
+                            <td className="sticky left-0 z-10 bg-[#0D0D10] p-1 border-b border-r border-[#1E1E22] text-[9px] font-bold"
+                              style={{ color: SECTOR_COLORS[ticker] || "#6B6B75" }}>
+                              {ticker}
+                            </td>
+                            {recent.map((d: any, i: number) => {
+                              const prev = i > 0 ? recent[i - 1].base100 : d.base100;
+                              const dailyChg = d.base100 - prev;
+                              const bg = dailyChg > 1.5 ? "#00CC0040" : dailyChg > 0.5 ? "#00CC0025" : dailyChg > 0 ? "#00CC0012"
+                                : dailyChg > -0.5 ? "#FF000012" : dailyChg > -1.5 ? "#FF000025" : "#FF000040";
+                              return (
+                                <td key={d.date} className="p-0 border-b border-[#0E0E12] text-center"
+                                  title={`${ticker} ${d.date}\nBase100: ${d.base100}\nVar: ${dailyChg >= 0 ? "+" : ""}${dailyChg.toFixed(1)}`}>
+                                  <div className="text-[7px] font-mono py-0.5" style={{ backgroundColor: bg, color: dailyChg >= 0 ? "#22C55E" : "#EF4444" }}>
+                                    {dailyChg >= 0 ? "+" : ""}{dailyChg.toFixed(1)}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </>
+          )}
 
           {/* Market Regime Interpretation */}
           <Card className="p-5 mt-4">

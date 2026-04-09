@@ -93,6 +93,73 @@ def economic_calendar():
 def total_options_volume():
     return uw_fetch("/market/total-options-volume")
 
+@router.get("/sector-rotation")
+def sector_rotation(days: int = 60):
+    """Fetch 250-day price+IV history for all sector ETFs from UW realized vol.
+    Returns normalized base-100 prices and spread cyclicals-defensives."""
+    import concurrent.futures
+    sectors = ["XLK", "XLV", "XLP", "XLU", "XLF", "XLE", "XLB", "XLY", "XLI", "XLRE"]
+    cyclical = {"XLK", "XLY", "XLF", "XLE", "XLI", "XLB"}
+    defensive = {"XLP", "XLU", "XLV", "XLRE"}
+
+    def fetch_sector(ticker):
+        data = uw_fetch(f"/stock/{ticker}/volatility/realized")
+        items = data.get("data", data) if isinstance(data, dict) else data
+        if not isinstance(items, list):
+            return ticker, []
+        return ticker, items[-days:] if len(items) > days else items
+
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+        futures = {ex.submit(fetch_sector, s): s for s in sectors}
+        for f in concurrent.futures.as_completed(futures):
+            ticker, history = f.result()
+            results[ticker] = history
+
+    # Build unified date series
+    all_dates = set()
+    for ticker, hist in results.items():
+        for d in hist:
+            if d.get("date"):
+                all_dates.add(d["date"])
+    sorted_dates = sorted(all_dates)[-days:]
+
+    # Build per-sector series with base-100 normalization
+    sector_series = {}
+    for ticker in sectors:
+        hist = results.get(ticker, [])
+        date_map = {d["date"]: d for d in hist if d.get("date")}
+        prices = []
+        for dt in sorted_dates:
+            d = date_map.get(dt)
+            if d and d.get("price"):
+                prices.append({"date": dt, "price": float(d["price"]), "iv": float(d["implied_volatility"] or 0) * 100})
+            elif prices:
+                prices.append({"date": dt, "price": prices[-1]["price"], "iv": prices[-1]["iv"]})
+        # Normalize base 100
+        if prices:
+            base = prices[0]["price"]
+            for p in prices:
+                p["base100"] = round(p["price"] / base * 100, 2) if base else 100
+        sector_series[ticker] = prices
+
+    # Compute spread cyclical - defensive per day
+    spread = []
+    for i, dt in enumerate(sorted_dates):
+        cyc_vals = [sector_series[t][i]["base100"] for t in cyclical if t in sector_series and i < len(sector_series[t])]
+        def_vals = [sector_series[t][i]["base100"] for t in defensive if t in sector_series and i < len(sector_series[t])]
+        cyc_avg = sum(cyc_vals) / len(cyc_vals) if cyc_vals else 100
+        def_avg = sum(def_vals) / len(def_vals) if def_vals else 100
+        spread.append({"date": dt, "spread": round(cyc_avg - def_avg, 2), "cyclical": round(cyc_avg, 2), "defensive": round(def_avg, 2)})
+
+    return {
+        "sectors": sector_series,
+        "spread": spread,
+        "days": len(sorted_dates),
+        "cyclical_tickers": list(cyclical),
+        "defensive_tickers": list(defensive),
+    }
+
 @router.get("/spot-exposures/strike")
 def spot_exposures(ticker: str = "SPY"):
     return uw_fetch(f"/stock/{ticker}/spot-exposures/strike")
