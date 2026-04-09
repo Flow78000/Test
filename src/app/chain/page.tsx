@@ -317,7 +317,19 @@ export default function ChainPage() {
     const pcRatio = totalCallVol ? totalPutVol / totalCallVol : 0;
 
     const allStrikes = rows.map((r) => r.strike).sort((a, b) => a - b);
-    const atm = allStrikes.length ? allStrikes[Math.floor(allStrikes.length / 2)] : 0;
+    // ATM = strike closest to spot price (estimated from call/put volume distribution)
+    // Calls have most volume near ATM, find strike where call vol + put vol is highest
+    let atm = allStrikes.length ? allStrikes[Math.floor(allStrikes.length / 2)] : 0;
+    let maxCombinedVol = 0;
+    for (const row of rows) {
+      if (row.call && row.put) {
+        const combined = (row.call.volume || 0) + (row.put.volume || 0);
+        if (combined > maxCombinedVol) {
+          maxCombinedVol = combined;
+          atm = row.strike;
+        }
+      }
+    }
 
     const vrp = ((avgIvC + avgIvP) / 2) * 100 - 15;
 
