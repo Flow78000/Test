@@ -13,6 +13,7 @@ interface OptionContract {
   type: "call" | "put";
   bid: number;
   ask: number;
+  mid: number;
   volume: number;
   open_interest: number;
   iv: number;
@@ -199,17 +200,22 @@ export default function ChainPage() {
         const parsed = parseOptionSymbol(c.symbol || c.option_symbol || "");
         const strike = parsed?.strike ?? (c.strike ? parseFloat(c.strike) : 0);
         const iv = c.implied_volatility ? parseFloat(c.implied_volatility) : (c.iv ? parseFloat(c.iv) : 0);
+        // UW fields: nbbo_bid, nbbo_ask, last_price, avg_price, volume, open_interest
+        const bid = parseFloat(c.nbbo_bid || c.bid || 0) || 0;
+        const ask = parseFloat(c.nbbo_ask || c.ask || 0) || 0;
+        const lastPrice = parseFloat(c.last_price || c.avg_price || 0) || 0;
         return {
           symbol: c.symbol || c.option_symbol || "",
           strike,
           type: parsed?.type ?? (c.type?.toLowerCase() === "put" ? "put" : "call"),
-          bid: c.bid ? parseFloat(c.bid) : 0,
-          ask: c.ask ? parseFloat(c.ask) : 0,
-          volume: c.volume ? parseInt(c.volume) : 0,
-          open_interest: c.open_interest ? parseInt(c.open_interest) : (c.oi ? parseInt(c.oi) : 0),
+          bid,
+          ask,
+          mid: bid && ask ? (bid + ask) / 2 : lastPrice,
+          volume: parseInt(c.volume || 0) || 0,
+          open_interest: parseInt(c.open_interest || c.oi || c.prev_oi || 0) || 0,
           iv,
-          delta: c.delta ? parseFloat(c.delta) : 0,
-          gamma: c.gamma ? parseFloat(c.gamma) : 0,
+          delta: parseFloat(c.delta || 0) || 0,
+          gamma: parseFloat(c.gamma || 0) || 0,
           expiration: c.expiration ?? expiry,
         };
       }).filter((c: any) => c.strike > 0 && !isNaN(c.strike));
@@ -347,8 +353,8 @@ export default function ChainPage() {
   const atmData = useMemo(() => {
     const atmRow = rows.find((r) => r.strike === stats.atm);
     if (!atmRow) return { callMid: 0, putMid: 0, expectedMove: 0, atmStrike: 0 };
-    const callMid = atmRow.call ? (atmRow.call.bid + atmRow.call.ask) / 2 : 0;
-    const putMid = atmRow.put ? (atmRow.put.bid + atmRow.put.ask) / 2 : 0;
+    const callMid = atmRow.call ? (atmRow.call.mid || (atmRow.call.bid + atmRow.call.ask) / 2) : 0;
+    const putMid = atmRow.put ? (atmRow.put.mid || (atmRow.put.bid + atmRow.put.ask) / 2) : 0;
     return { callMid, putMid, expectedMove: callMid + putMid, atmStrike: stats.atm };
   }, [rows, stats.atm]);
 
@@ -382,8 +388,8 @@ export default function ChainPage() {
       const shortCall = callMap.get(s1);
       const longCall = callMap.get(s2);
       if (shortCall && longCall && s1 > stats.atm) {
-        const shortMid = (shortCall.bid + shortCall.ask) / 2;
-        const longMid = (longCall.bid + longCall.ask) / 2;
+        const shortMid = shortCall.mid || (shortCall.bid + shortCall.ask) / 2;
+        const longMid = longCall.mid || (longCall.bid + longCall.ask) / 2;
         const mark = shortMid - longMid;
         if (mark > 0 && width > mark) {
           const rom = (mark / (width - mark)) * 100;
@@ -402,8 +408,8 @@ export default function ChainPage() {
       const shortPut = putMap.get(s2);
       const longPut = putMap.get(s1);
       if (shortPut && longPut && s2 < stats.atm) {
-        const shortMid = (shortPut.bid + shortPut.ask) / 2;
-        const longMid = (longPut.bid + longPut.ask) / 2;
+        const shortMid = shortPut.mid || (shortPut.bid + shortPut.ask) / 2;
+        const longMid = longPut.mid || (longPut.bid + longPut.ask) / 2;
         const mark = shortMid - longMid;
         if (mark > 0 && width > mark) {
           const rom = (mark / (width - mark)) * 100;
