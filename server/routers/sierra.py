@@ -6,6 +6,7 @@ from services.sierra_reader import (
     sierra_mean_reversion_signals, sierra_columns, sierra_dashboard,
     sierra_performance, sierra_gex_analysis
 )
+from services.signal_store import collect_signals, get_stored_signals, get_store_summary
 
 router = APIRouter()
 
@@ -42,7 +43,12 @@ def zones(symbol: str = "USEquities"):
 
 @router.get("/mean-reversion")
 def mean_reversion(symbol: str = "USEquities", bars: int = 100):
-    return sierra_mean_reversion_signals(bars, symbol)
+    result = sierra_mean_reversion_signals(bars, symbol)
+    # Persist signals automatically
+    if "signals" in result and result["signals"]:
+        new_count = collect_signals(result["signals"], symbol)
+        result["_persisted"] = new_count
+    return result
 
 @router.get("/dashboard")
 def dashboard():
@@ -149,3 +155,37 @@ def signal_history():
         with open(history_file, "r") as f:
             return json.load(f)
     return {"error": "Historique non genere. Lancer le script d'extraction."}
+
+# ================================================================
+# Signal Store — Persistence permanente
+# ================================================================
+
+@router.get("/store/signals")
+def store_signals(symbol: str = None, days: int = None, min_strength: int = 0):
+    """Récupère les signaux persistés (survivent après suppression Sierra).
+    Filtres: symbol, days (derniers N jours), min_strength (0-4)."""
+    return get_stored_signals(symbol, days, min_strength)
+
+@router.get("/store/summary")
+def store_summary():
+    """Résumé du store: nb signaux par symbole, dates, stats."""
+    return get_store_summary()
+
+@router.get("/store/collect-all")
+def store_collect_all():
+    """Collecte les signaux de TOUS les fichiers Sierra et les persiste."""
+    files = sierra_scan_files()
+    total_new = 0
+    collected = {}
+    for sym in files:
+        result = sierra_mean_reversion_signals(200, sym)
+        if "signals" in result and result["signals"]:
+            new = collect_signals(result["signals"], sym)
+            total_new += new
+            collected[sym] = {"detected": len(result["signals"]), "new_persisted": new}
+    return {
+        "status": "ok",
+        "total_new_signals": total_new,
+        "assets_scanned": len(files),
+        "details": collected,
+    }

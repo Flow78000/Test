@@ -13,6 +13,48 @@ import {
 const API = "http://localhost:3850";
 const TICKERS = ["SPX", "SPY", "QQQ"];
 
+// Couleurs par jour de semaine (lundi=1 ... vendredi=5)
+const DAY_COLORS: Record<number, string> = {
+  0: "#6B6B75",  // Dimanche (rare)
+  1: "#42A5F5",  // Lundi — bleu
+  2: "#AB47BC",  // Mardi — violet
+  3: "#FF6B00",  // Mercredi — orange
+  4: "#22C55E",  // Jeudi — vert
+  5: "#EF4444",  // Vendredi — rouge
+  6: "#FFA726",  // Samedi (rare)
+};
+const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+// Parse date string "2026-4-9" to day of week
+function getDayOfWeek(dateStr: string): number {
+  if (!dateStr) return -1;
+  const parts = dateStr.split("-");
+  if (parts.length < 3) return -1;
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  return d.getDay();
+}
+
+// Add day color + detect day boundaries in time_series
+function enrichTimeSeries(data: any[]) {
+  if (!data?.length) return { enriched: [], dayBoundaries: [] };
+  const enriched = data.map((d: any) => {
+    const day = getDayOfWeek(d.date);
+    return { ...d, _day: day, _dayColor: DAY_COLORS[day] || "#6B6B75" };
+  });
+  // Find indices where day changes
+  const dayBoundaries: { index: number; time: string; dayName: string }[] = [];
+  for (let i = 1; i < enriched.length; i++) {
+    if (enriched[i]._day !== enriched[i - 1]._day && enriched[i]._day >= 0) {
+      dayBoundaries.push({
+        index: i,
+        time: enriched[i].time,
+        dayName: DAY_NAMES[enriched[i]._day] || "?",
+      });
+    }
+  }
+  return { enriched, dayBoundaries };
+}
+
 function darkTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -122,55 +164,73 @@ function TotalGexTab() {
         </Card>
       )}
 
-      {/* Total GEX Time Series */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-4">
-          <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-3">Total GEX — Evolution</div>
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={time_series}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
-              <XAxis dataKey="time" tick={{ fill: "#6B6B75", fontSize: 9 }} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
-              <Tooltip content={darkTooltip} />
-              <ReferenceLine y={0} stroke="#6B6B75" strokeDasharray="4 4" />
-              <ReferenceLine y={20} stroke="#22C55E33" strokeDasharray="2 2" />
-              <ReferenceLine y={-20} stroke="#EF444433" strokeDasharray="2 2" />
-              <ReferenceLine y={40} stroke="#22C55E55" strokeDasharray="2 2" />
-              <ReferenceLine y={-40} stroke="#EF444455" strokeDasharray="2 2" />
-              <Area dataKey="total_gex" fill="#FF6B0015" stroke="#FF6B00" strokeWidth={1.5} name="Total GEX" dot={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </Card>
+      {/* Total GEX Time Series — colored by day */}
+      {(() => {
+        const { enriched, dayBoundaries } = enrichTimeSeries(time_series);
+        // Build per-day data: for each day, only that day has the value, others null
+        const days = Array.from(new Set(enriched.map((d: any) => d._day).filter((d: number) => d >= 0)));
 
-        <Card className="p-4">
-          <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-3">Total Delta — Evolution</div>
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={time_series}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
-              <XAxis dataKey="time" tick={{ fill: "#6B6B75", fontSize: 9 }} interval="preserveStartEnd" />
-              <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
-              <Tooltip content={darkTooltip} />
-              <ReferenceLine y={0} stroke="#6B6B75" strokeDasharray="4 4" />
-              <Area dataKey="total_delta" fill="#AB47BC15" stroke="#AB47BC" strokeWidth={1.5} name="Total Delta" dot={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
+        // Chart with colored bars per day + vertical day separators
+        const DayColorChart = ({ dataKey, title, height = 280 }: { dataKey: string; title: string; height?: number }) => (
+          <Card className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="text-xs text-[#6B6B75] uppercase tracking-wider">{title}</div>
+              <div className="flex gap-2 ml-auto">
+                {days.map(d => (
+                  <div key={d} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: DAY_COLORS[d] }} />
+                    <span className="text-[10px] text-[#6B6B75]">{DAY_NAMES[d]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={height}>
+              <ComposedChart data={enriched}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
+                <XAxis dataKey="time" tick={{ fill: "#6B6B75", fontSize: 9 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
+                <Tooltip content={darkTooltip} />
+                <ReferenceLine y={0} stroke="#6B6B75" strokeDasharray="4 4" />
+                {dataKey === "total_gex" && (
+                  <>
+                    <ReferenceLine y={20} stroke="#22C55E33" strokeDasharray="2 2" />
+                    <ReferenceLine y={-20} stroke="#EF444433" strokeDasharray="2 2" />
+                    <ReferenceLine y={40} stroke="#22C55E55" strokeDasharray="2 2" />
+                    <ReferenceLine y={-40} stroke="#EF444455" strokeDasharray="2 2" />
+                  </>
+                )}
+                {/* Vertical lines for day boundaries */}
+                {dayBoundaries.map((b, i) => (
+                  <ReferenceLine key={`day-${i}`} x={b.time} stroke="#3A3A3E" strokeWidth={1} strokeDasharray="2 4" label={{ value: b.dayName, position: "top", fill: "#6B6B75", fontSize: 9 }} />
+                ))}
+                {/* One line per day with its color */}
+                {days.map(d => (
+                  <Line
+                    key={d}
+                    dataKey={(row: any) => row._day === d ? row[dataKey] : null}
+                    stroke={DAY_COLORS[d]}
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls={false}
+                    name={DAY_NAMES[d]}
+                    isAnimationActive={false}
+                  />
+                ))}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+        );
 
-      {/* GTS — Gamma Trend Score */}
-      <Card className="p-4">
-        <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-3">GTS (Gamma Trend Score) — Evolution</div>
-        <ResponsiveContainer width="100%" height={250}>
-          <ComposedChart data={time_series}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
-            <XAxis dataKey="time" tick={{ fill: "#6B6B75", fontSize: 9 }} interval="preserveStartEnd" />
-            <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
-            <Tooltip content={darkTooltip} />
-            <ReferenceLine y={0} stroke="#6B6B75" strokeDasharray="4 4" />
-            <Area dataKey="gts" fill="#42A5F515" stroke="#42A5F5" strokeWidth={1.5} name="GTS" dot={false} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </Card>
+        return (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <DayColorChart dataKey="total_gex" title="Total GEX — Evolution" />
+              <DayColorChart dataKey="total_delta" title="Total Delta — Evolution" />
+            </div>
+            <DayColorChart dataKey="gts" title="GTS (Gamma Trend Score) — Evolution" height={250} />
+          </>
+        );
+      })()}
 
       {/* Crossing Analysis Table */}
       <Card className="p-4">
@@ -236,8 +296,8 @@ function TotalGexTab() {
             <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
             <Tooltip content={darkTooltip} />
             <ReferenceLine y={0} stroke="#6B6B75" strokeDasharray="4 4" />
-            <Bar dataKey="call_gex" fill="#22C55E" name="Call GEX" />
-            <Bar dataKey="put_gex" fill="#EF4444" name="Put GEX" />
+            <Bar dataKey="call_gex" fill="#22C55E80" name="Call GEX" />
+            <Bar dataKey="put_gex" fill="#EF444480" name="Put GEX" />
           </BarChart>
         </ResponsiveContainer>
       </Card>

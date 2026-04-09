@@ -28,6 +28,17 @@ SIERRA_ASSETS = {
     "SP500GEX-VXX": {"name": "VXX Vol Synthetique", "class": "Volatilite", "timeframe": "5min"},
     "SP500GEX-SPXS": {"name": "SPXS Vol Synthetique", "class": "Inverse", "timeframe": "5min"},
     "SP500GEX-TICK": {"name": "TICK Renko Breadth", "class": "Breadth", "timeframe": "renko"},
+    # INDICE_US_RANGE_Week
+    "SPY-NQTV-RangeWeek": {"name": "SPY Range Hebdo", "class": "Indices US", "timeframe": "60min", "chartbook": "INDICE_US_RANGE_Week"},
+    "NQ-RangeWeek": {"name": "NQ Range Hebdo", "class": "Indices US", "timeframe": "60min", "chartbook": "INDICE_US_RANGE_Week"},
+    "YM-RangeWeek": {"name": "YM Range Hebdo", "class": "Indices US", "timeframe": "60min", "chartbook": "INDICE_US_RANGE_Week"},
+    "RTY-RangeWeek": {"name": "RTY Range Hebdo", "class": "Indices US", "timeframe": "60min", "chartbook": "INDICE_US_RANGE_Week"},
+    "SPX-CGI": {"name": "SPX CGI GEX Levels", "class": "GEX", "timeframe": "5min", "chartbook": "INDICE_US_RANGE_Week"},
+    # DiscordStream
+    "DiscordStream": {"name": "SPX+QQQ+SPY Notional Delta", "class": "GEX", "timeframe": "1min", "chartbook": "DiscordStream"},
+    "DiscordStream-ES5s": {"name": "ES GEX Levels 5s", "class": "GEX", "timeframe": "5sec", "chartbook": "DiscordStream"},
+    "DiscordStream-ES30s-QQQ": {"name": "ES GEX Levels QQQ 30s", "class": "GEX", "timeframe": "30sec", "chartbook": "DiscordStream"},
+    "DiscordStream-ES30s-Zones": {"name": "ES GEX Zones 30s", "class": "GEX", "timeframe": "30sec", "chartbook": "DiscordStream"},
 }
 
 # Simple in-module cache
@@ -48,25 +59,41 @@ def _set_cache(key, data):
 
 
 def sierra_scan_files():
-    """Scan all BarStudyData CSV files in Sierra Data directory"""
+    """Scan all BarStudyData CSV/TXT files in Sierra Data directory"""
     found = {}
     if not os.path.exists(SIERRA_DATA_DIR):
         return found
+    # Also track known symbols from SIERRA_ASSETS that might not have -BarStudyData suffix
+    known_symbols = set(SIERRA_ASSETS.keys())
     for f in os.listdir(SIERRA_DATA_DIR):
+        symbol = None
         if f.endswith("-BarStudyData.csv") or f.endswith("-BarStudyData.txt"):
             symbol = f.replace("-BarStudyData.csv", "").replace("-BarStudyData.txt", "")
-            path = os.path.join(SIERRA_DATA_DIR, f)
-            size = os.path.getsize(path)
-            mtime = os.path.getmtime(path)
-            meta = SIERRA_ASSETS.get(symbol, {"name": symbol, "class": "Autre", "timeframe": "?"})
-            found[symbol] = {
-                "path": path,
-                "name": meta["name"],
-                "asset_class": meta["class"],
-                "timeframe": meta["timeframe"],
-                "size_mb": round(size / 1024 / 1024, 2),
-                "last_modified": datetime.fromtimestamp(mtime).isoformat(),
-            }
+        else:
+            # Check if file matches a known symbol without -BarStudyData suffix
+            for ext in [".csv", ".txt"]:
+                if f.endswith(ext):
+                    candidate = f.replace(ext, "")
+                    if candidate in known_symbols:
+                        symbol = candidate
+                        break
+        if not symbol:
+            continue
+        # Skip if already found with -BarStudyData version (priority)
+        if symbol in found:
+            continue
+        path = os.path.join(SIERRA_DATA_DIR, f)
+        size = os.path.getsize(path)
+        mtime = os.path.getmtime(path)
+        meta = SIERRA_ASSETS.get(symbol, {"name": symbol, "class": "Autre", "timeframe": "?"})
+        found[symbol] = {
+            "path": path,
+            "name": meta["name"],
+            "asset_class": meta["class"],
+            "timeframe": meta["timeframe"],
+            "size_mb": round(size / 1024 / 1024, 2),
+            "last_modified": datetime.fromtimestamp(mtime).isoformat(),
+        }
     return found
 
 
@@ -74,9 +101,14 @@ def sierra_get_csv_path(symbol=None):
     """Get CSV path for a symbol, default to USEquities"""
     if not symbol:
         symbol = "USEquities"
-    # Check both .csv and .txt extensions
-    for ext in [".csv", ".txt"]:
-        path = os.path.join(SIERRA_DATA_DIR, f"{symbol}-BarStudyData{ext}")
+    # Check all possible naming patterns
+    for pattern in [
+        f"{symbol}-BarStudyData.csv",
+        f"{symbol}-BarStudyData.txt",
+        f"{symbol}.csv",
+        f"{symbol}.txt",
+    ]:
+        path = os.path.join(SIERRA_DATA_DIR, pattern)
         if os.path.exists(path):
             return path
     return None
