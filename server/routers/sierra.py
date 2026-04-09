@@ -7,6 +7,7 @@ from services.sierra_reader import (
     sierra_performance, sierra_gex_analysis
 )
 from services.signal_store import collect_signals, get_stored_signals, get_store_summary
+from services.range_signals import detect_range_signals, get_current_position, persist_signals as persist_range_signals
 
 router = APIRouter()
 
@@ -189,3 +190,102 @@ def store_collect_all():
         "assets_scanned": len(files),
         "details": collected,
     }
+
+# ================================================================
+# Range Weekly Signals — Futures + Options
+# ================================================================
+
+@router.get("/discord-stream")
+def discord_stream(bars: int = 500):
+    """Données DiscordStream: Notional Delta SPX/QQQ/SPY + GEX levels ES."""
+    from services.sierra_reader import sierra_read_history, sierra_get_csv_path
+    import time as _time
+    import os
+    result = {}
+
+    # DiscordStream main: SPX + QQQ + SPY Notional Delta (cols 13-21)
+    csv_path = sierra_get_csv_path("DiscordStream")
+    if csv_path:
+        try:
+            mtime = os.path.getmtime(csv_path)
+            with open(csv_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            header = [h.strip() for h in lines[0].split(",")]
+            data = []
+            for line in lines[-bars:]:
+                cols = [c.strip() for c in line.split(",")]
+                if len(cols) < 22 or cols[0] == "Date":
+                    continue
+                try:
+                    row = {
+                        "date": cols[0], "time": cols[1].strip()[:8],
+                        "price": float(cols[5]),
+                        "spx_notional_delta": float(cols[13]) if cols[13] else 0,
+                        "spx_call_buysell": float(cols[14]) if cols[14] else 0,
+                        "spx_put_buysell": float(cols[15]) if cols[15] else 0,
+                        "qqq_notional_delta": float(cols[16]) if cols[16] else 0,
+                        "qqq_call_buysell": float(cols[17]) if cols[17] else 0,
+                        "qqq_put_buysell": float(cols[18]) if cols[18] else 0,
+                        "spy_notional_delta": float(cols[19]) if cols[19] else 0,
+                        "spy_call_buysell": float(cols[20]) if cols[20] else 0,
+                        "spy_put_buysell": float(cols[21]) if cols[21] else 0,
+                    }
+                    data.append(row)
+                except:
+                    continue
+            result["notional_delta"] = {
+                "data": data,
+                "count": len(data),
+                "data_age_seconds": round(_time.time() - mtime),
+                "is_stale": (_time.time() - mtime) > 300,
+            }
+        except Exception as e:
+            result["notional_delta"] = {"error": str(e)}
+
+    # DiscordStream-ES5s: GEX + Delta + GTS (already used by gex_analysis)
+    # DiscordStream-ES30s-Zones: GEX levels/zones
+    csv_path_zones = sierra_get_csv_path("DiscordStream-ES30s-Zones")
+    if csv_path_zones:
+        try:
+            mtime = os.path.getmtime(csv_path_zones)
+            with open(csv_path_zones, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            header = [h.strip() for h in lines[0].split(",")]
+            # Last bar only for current levels
+            last = [c.strip() for c in lines[-1].split(",")]
+            levels = {}
+            for i, h in enumerate(header):
+                if i < len(last) and h and h not in ("Date", "Time", "Open", "High", "Low", "Last", "Volume", "# of Trades"):
+                    try:
+                        v = float(last[i])
+                        if v != 0:
+                            levels[h] = v
+                    except:
+                        pass
+            result["gex_zones"] = {
+                "levels": levels,
+                "price": float(last[5]) if len(last) > 5 else None,
+                "date": last[0], "time": last[1][:8] if len(last) > 1 else "",
+                "data_age_seconds": round(_time.time() - mtime),
+            }
+        except Exception as e:
+            result["gex_zones"] = {"error": str(e)}
+
+    return result
+
+@router.get("/range-signals")
+def range_signals(bars: int = 500):
+    """Détecte les touches de niveaux % hebdomadaires.
+    Retourne signaux Futures (entry/target/stop) + stratégies Options optimales."""
+    result = detect_range_signals(bars)
+    # Persist automatically
+    if result.get("signals"):
+        new = persist_range_signals(result["signals"])
+        result["_persisted"] = new
+    return result
+
+@router.get("/range-position")
+def range_position():
+    """Position actuelle dans le range hebdo pour chaque actif.
+    Niveaux les plus proches au-dessus et en-dessous."""
+    return get_current_position()

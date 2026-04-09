@@ -166,8 +166,11 @@ function TotalGexTab() {
 
       {/* Total GEX Time Series — colored by day */}
       {(() => {
-        const { enriched, dayBoundaries } = enrichTimeSeries(time_series);
-        // Build per-day data: for each day, only that day has the value, others null
+        // Filter out rows where all GEX values are null/0
+        const validSeries = (time_series || []).filter((d: any) =>
+          d.total_gex != null || d.total_delta != null || d.gts != null
+        );
+        const { enriched, dayBoundaries } = enrichTimeSeries(validSeries);
         const days = Array.from(new Set(enriched.map((d: any) => d._day).filter((d: number) => d >= 0)));
 
         // Chart with colored bars per day + vertical day separators

@@ -599,10 +599,14 @@ def sierra_performance(symbol=None):
 
 def sierra_gex_analysis(bars=5000):
     """Analyse Total GEX crossings: zero line, levels 10/20/30/40 and negatives.
-    Returns time series + crossing stats + level distribution."""
-    csv_path = sierra_get_csv_path("SP500GEX")
+    Returns time series + crossing stats + level distribution.
+    Source: DiscordStream-ES5s (has Total GEX, Delta, GTS columns)."""
+    # Try DiscordStream-ES5s first (has all GEX columns), fallback to SP500GEX
+    csv_path = sierra_get_csv_path("DiscordStream-ES5s")
     if not csv_path:
-        return {"error": "Fichier SP500GEX non trouve"}
+        csv_path = sierra_get_csv_path("SP500GEX")
+    if not csv_path:
+        return {"error": "Fichier GEX non trouve (DiscordStream-ES5s ou SP500GEX)"}
 
     cache_key = f"gex_analysis_{bars}"
     cached = _get_cached(cache_key, 120)
