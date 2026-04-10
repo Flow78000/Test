@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, PageHeader, Badge, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { VolSurface3D } from "@/components/ui/vol-surface-3d";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts";
@@ -192,7 +193,28 @@ export default function SurfacePage() {
             </Card>
           </div>
 
-          {/* IV Surface heatmap */}
+          {/* IV Surface 3D interactive (Plotly) */}
+          <Card className="p-4 mb-4">
+            <h2 className="text-sm font-bold text-[#FFA726] uppercase tracking-wider mb-2">
+              Surface de Volatilite 3D — {data.ticker}
+            </h2>
+            <p className="text-xs text-[#6B6B75] mb-3">
+              Surface interactive temps reel — cliquez-glissez pour tourner, molette pour zoomer,
+              shift+glisser pour panner. X = DTE (jours avant expiration), Y = Moneyness
+              (strike/spot, 100% = ATM), Z = IV. Surface construite a partir des option-contracts
+              Unusual Whales.
+            </p>
+            <VolSurface3D
+              ticker={data.ticker}
+              spot={data.spot}
+              moneyness={data.moneyness}
+              dtes={data.dtes}
+              surface={data.surface}
+              height={580}
+            />
+          </Card>
+
+          {/* IV Surface heatmap 2D */}
           <Card className="p-4 mb-4">
             <h2 className="text-sm font-bold text-[#FFA726] uppercase tracking-wider mb-2">
               Implied Volatility Surface — {data.ticker}
