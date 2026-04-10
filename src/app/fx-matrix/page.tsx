@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PageHeader, LiveBadge, Card } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 
 const API = "http://localhost:3850";
 const CURRENCIES = ["EUR", "USD", "JPY", "GBP", "CHF", "AUD", "CAD", "NZD"];
@@ -53,7 +54,7 @@ export default function FxMatrixPage() {
       } catch { /* use demo data */ }
     }
     fetchLive();
-    const i = setInterval(fetchLive, 60_000);
+    const i = setInterval(fetchLive, 10_000);
     return () => clearInterval(i);
   }, []);
 
@@ -70,7 +71,7 @@ export default function FxMatrixPage() {
 
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Matrice FX" subtitle="Forces relatives et correlations des 8 devises majeures">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Matrice FX" subtitle="Forces relatives et correlations des 8 devises majeures">
         {!isLive && (
           <span className="px-2 py-1 rounded text-[10px] font-semibold bg-[#FFB30015] text-[#FFB300] border border-[#FFB30030]">
             DEMO DATA

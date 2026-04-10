@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { SkeletonGrid, SkeletonChart, ErrorCard } from "@/components/ui/skeleton";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip,
@@ -84,7 +85,7 @@ export default function VolConePage() {
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    setLoading(true); setError("");
+    setError("");
     try {
       const res = await fetch(`${API}/api/uw/volatility/realized?ticker=${ticker}`).then(r => r.json());
       setRaw(Array.isArray(res) ? res : res?.data ?? []);
@@ -167,24 +168,9 @@ export default function VolConePage() {
   const vrpColor = vrp > 0.03 ? "#22C55E" : vrp > 0 ? "#FFA726" : "#EF4444";
   const vrpEdge = vrp > 0.05 ? "EDGE FORT — Vente de vol optimale" : vrp > 0.02 ? "EDGE MODERE — Vente de vol possible" : vrp > 0 ? "EDGE FAIBLE — Prudence" : "PAS D'EDGE — Ne pas vendre de vol";
 
-  if (loading) return (
-    <div className="p-6">
-      <PageHeader title="Cone de Volatilite" subtitle="Bloomberg-style — Percentiles historiques" />
-      <SkeletonGrid cols={4} />
-      <SkeletonChart height={350} />
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-6">
-      <PageHeader title="Cone de Volatilite" subtitle="Bloomberg-style — Percentiles historiques" />
-      <ErrorCard message={error} onRetry={load} />
-    </div>
-  );
-
   return (
     <div className="p-6">
-      <PageHeader title="Cone de Volatilite" subtitle="Bloomberg-style — Distribution historique de la volatilite realisee">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Cone de Volatilite" subtitle="Bloomberg-style — Distribution historique de la volatilite realisee">
         <select value={ticker} onChange={e => setTicker(e.target.value)} className="text-xs">
           <option value="SPY">SPY</option>
           <option value="QQQ">QQQ</option>
@@ -201,6 +187,15 @@ export default function VolConePage() {
         <LiveBadge />
       </PageHeader>
 
+      {loading && !raw.length ? (
+        <>
+          <SkeletonGrid cols={4} />
+          <SkeletonChart height={350} />
+        </>
+      ) : error && !raw.length ? (
+        <ErrorCard message={error} onRetry={load} />
+      ) : (
+        <>
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-3 mb-4">
         <KpiCard label="IV Courante" value={pct(currentIV)} color="#B388FF" sublabel="Implicite SPY" />
@@ -356,6 +351,8 @@ export default function VolConePage() {
           </p>
         </Card>
       </div>
+        </>
+      )}
     </div>
   );
 }

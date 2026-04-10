@@ -52,18 +52,18 @@ export function SkeletonTable({ rows = 5, cols = 6 }: { rows?: number; cols?: nu
   );
 }
 
-export function ErrorCard({ message = "Serveur non disponible", onRetry }: { message?: string; onRetry?: () => void }) {
+export function ErrorCard({ message = "Reconnexion automatique en cours", onRetry }: { message?: string; onRetry?: () => void }) {
   return (
-    <div className="bg-[#111114] border border-[#EF444433] rounded-xl p-8 text-center">
-      <div className="text-[#EF4444] text-lg font-bold mb-2">Connexion impossible</div>
+    <div className="bg-[#111114] border border-[#FF6B0033] rounded-xl p-8 text-center">
+      <div className="text-[#FF6B00] text-lg font-bold mb-2">Reconnexion en cours...</div>
       <div className="text-[#6B6B75] text-sm mb-4">{message}</div>
-      <div className="text-xs text-[#6B6B75] font-mono bg-[#08080A] rounded-lg p-3 inline-block mb-4">
-        cd D:\flo-w\server && python main.py
+      <div className="text-xs text-[#6B6B75] bg-[#08080A] rounded-lg p-3 inline-block mb-4">
+        Le serveur se reconnecte tout seul — aucune action requise.
       </div>
       {onRetry && (
         <div>
           <button onClick={onRetry} className="px-4 py-2 bg-[#FF6B00] text-black rounded-lg text-sm font-semibold hover:bg-[#FF8533] transition-colors">
-            Reessayer
+            Forcer un rafraichissement
           </button>
         </div>
       )}

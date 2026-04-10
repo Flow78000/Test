@@ -51,6 +51,23 @@ venv/
 server/vol_desk_history.json
 server/sierra_signal_history.json
 server/regime_history.json
+server/darkpool_scanner_cache.json
+server/dividend_cache.json
+server/menthorq_cache.json
+server/menthorq_images/
+server/messages_store.json
+server/news_archive.json
+server/range_intraday_history.json
+server/range_signals.json
+server/sentiment_cache.json
+server/signal_history.json
+server/scripts/menthorq_response.html
+
+# Working/temp files at repo root
+backend.log
+na.json
+rm.json
+r1.json
 
 # IDE
 .vscode/

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { DataFreshness } from "@/components/ui/data-freshness";
 import { fmtNum, fmtPct } from "@/lib/format";
 import {
@@ -76,7 +77,6 @@ function TotalGexTab() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const [analysis, live] = await Promise.all([
         fetch(`${API}/api/sierra/gex-analysis?bars=8000`).then(r => r.json()),
@@ -88,7 +88,7 @@ function TotalGexTab() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, [load]);
 
   if (loading && !gexData) return <div className="text-center py-20 text-[#6B6B75]">Chargement Total GEX...</div>;
   if (!gexData || gexData.error) return <Card className="p-8 text-center text-red-400">{gexData?.error || "Erreur"}</Card>;
@@ -132,10 +132,10 @@ function TotalGexTab() {
         <KpiCard label="Range" value={`${fmtNum(distribution?.min, 1)} / ${fmtNum(distribution?.max, 1)}`} color="#6B6B75" sublabel={`Moy: ${fmtNum(distribution?.mean, 1)}`} />
       </div>
 
-      {/* MenthorQ Levels Live */}
+      {/* FLO.Q Levels Live */}
       {Object.keys(liveGex).length > 0 && (
         <Card className="p-4">
-          <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-3">Niveaux MenthorQ Live</div>
+          <div className="text-xs text-[#6B6B75] uppercase tracking-wider mb-3">Niveaux FLO.Q Live</div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
             {[
               { key: "Call Resistance", label: "Call Resist.", color: "#EF4444" },
@@ -456,7 +456,7 @@ export default function GreeksPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="GEX Intelligence" subtitle="Gamma Exposure — Analyse temps reel et crossings historiques">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="GEX Intelligence" subtitle="Gamma Exposure — Analyse temps reel et crossings historiques">
         <LiveBadge />
       </PageHeader>
 

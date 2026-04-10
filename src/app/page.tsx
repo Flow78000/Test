@@ -80,12 +80,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     refresh();
-    const i = setInterval(refresh, 30000);
+    const i = setInterval(refresh, 10000);
     return () => clearInterval(i);
   }, [refresh]);
 
-  if (loading) return <div className="p-6"><SkeletonGrid cols={6} /><SkeletonGrid cols={3} /></div>;
-  if (error || !data) return <div className="p-6"><ErrorCard onRetry={refresh} /></div>;
+  if (loading && !data) return <div className="p-6"><SkeletonGrid cols={6} /><SkeletonGrid cols={3} /></div>;
+  if (!data) return <div className="p-6"><ErrorCard onRetry={refresh} /></div>;
 
   const { regime } = data;
   const bullPct = data.tide?.bull_pct ?? 55;

@@ -8,6 +8,9 @@ from services.sierra_reader import (
 )
 from services.signal_store import collect_signals, get_stored_signals, get_store_summary
 from services.range_signals import detect_range_signals, get_current_position, persist_signals as persist_range_signals
+from services.sigma_signals import detect_sigma_signals, detect_hundred_pct_signals
+from services.range_dashboard import read_range_dashboard
+from services.range_matrix import compute_range_matrix
 
 router = APIRouter()
 
@@ -71,11 +74,34 @@ def performance_all():
 def daily_ranges(days: int = 10):
     """Compute daily OHLC ranges from all Sierra CSV files.
     Reads Date(col0), Open(col2), High(col3), Low(col4), Last(col5) by INDEX
-    to avoid duplicate column name issues."""
+    to avoid duplicate column name issues.
+    Filters to meaningful assets only (no raw timeframes, no GEX sub-charts, etc.)."""
     from services.sierra_reader import sierra_scan_files, sierra_get_csv_path
     files = sierra_scan_files()
+
+    # Only include meaningful assets — skip raw timeframe files, GEX sub-charts,
+    # DiscordStream variants, TICK breadth, and duplicate range week files
+    INCLUDE_SYMBOLS = {
+        # Indices
+        "ESM6.CME", "NQM6.CME", "YMM6.CBOT", "RTYM6.CME", "USEquities",
+        # Range Week
+        "SPY-NQTV-RangeWeek", "NQ-RangeWeek", "YM-RangeWeek", "RTY-RangeWeek",
+        # EUREX
+        "Bund", "EUSTX50", "GER30",
+        # Volatility
+        "VXX-NQTV", "VOLX",
+        # Inverse
+        "SPXS-NQTV",
+        # Treasuries
+        "UST-ZN", "UST-ZB", "UST-ZF", "UST-UB", "UST-10YX",
+        # Grains
+        "ZWK6.CBOT", "ZSK6.CBOT", "ZCU6.CBOT", "ZMK6.CBOT",
+    }
+
     result = {}
     for sym in files:
+        if sym not in INCLUDE_SYMBOLS:
+            continue
         csv_path = sierra_get_csv_path(sym)
         if not csv_path:
             continue
@@ -289,3 +315,109 @@ def range_position():
     """Position actuelle dans le range hebdo pour chaque actif.
     Niveaux les plus proches au-dessus et en-dessous."""
     return get_current_position()
+
+# ================================================================
+# Sigma + 100% level signals (live feeds refreshed every 10s)
+# ================================================================
+
+@router.get("/sigma-signals")
+def sigma_signals():
+    """Signaux sigma: depassement de la volatilite realisee 22j.
+    Equivalent du sigma vert visuel Sierra.
+    Declenche quand |log_ret_jour| >= RV22/sqrt(252) * 1.0"""
+    return detect_sigma_signals()
+
+@router.get("/hundred-pct-signals")
+def hundred_pct_signals():
+    """Signaux de touche du niveau 100%+/- hebdomadaire par actif."""
+    return detect_hundred_pct_signals()
+
+@router.get("/range-matrix")
+def range_matrix(days: int = 30, baseline_window: int = 20, live: bool = True):
+    """Matrice assets x dates du range journalier (H-L)/Close en % et en
+    ratio vs baseline (moyenne mobile N jours). Couvre FX, Treasuries, Indices,
+    Metaux, Energie, Grains et Crypto. Equivaut au 'Range Week' de Sierra Chart.
+
+    Par defaut (live=True) renvoie le dernier snapshot calcule par le scheduler
+    (jours passes figes, jour courant rafraichi toutes les 5 minutes).
+    Passer live=false pour forcer un recalcul complet a la demande."""
+    if live:
+        from services.range_scheduler import get_latest_matrix
+        cached = get_latest_matrix()
+        if cached is not None:
+            return cached
+    return compute_range_matrix(days=days, baseline_window=baseline_window)
+
+
+@router.get("/range-dashboard")
+def range_dashboard():
+    """Lit le fichier Sierra 'RangeDash-BarStudyData.txt' produit par
+    le chart Range Dashboard. Si le fichier n'existe pas encore, retourne
+    un fallback construit depuis les fichiers RangeWeek."""
+    return read_range_dashboard()
+
+
+@router.get("/range-scheduler/status")
+def range_scheduler_status():
+    """Etat du scheduler qui refresh la range matrix toutes les 5 minutes."""
+    from services.range_scheduler import get_status
+    return get_status()
+
+
+@router.post("/range-scheduler/refresh")
+def range_scheduler_refresh():
+    """Force un refresh immediat (bypass du cache 60s)."""
+    from services.range_scheduler import force_refresh
+    return force_refresh()
+
+
+@router.get("/range-intraday")
+def range_intraday(trading_date: str | None = None, symbol: str | None = None, limit: int = 200):
+    """Historique intraday des snapshots de range (toutes les 5 minutes).
+    - trading_date : 'YYYY-MM-DD' pour filtrer un jour precis
+    - symbol : sym pour recuperer la serie temporelle d'un seul actif
+    - limit : nombre max de snapshots retournes (most recent first)."""
+    from services.range_scheduler import get_intraday_history
+    return get_intraday_history(trading_date=trading_date, symbol=symbol, limit=limit)
+
+@router.get("/live-alerts")
+def live_alerts():
+    """Feed unifie: sigma breakthroughs + 100% touches pour la sidebar/banner."""
+    sigma = detect_sigma_signals()
+    hundred = detect_hundred_pct_signals()
+    # Normalise pour un feed unique
+    alerts = []
+    for s in sigma.get("signals", []):
+        alerts.append({
+            "type": "SIGMA",
+            "symbol": s["symbol"],
+            "name": s.get("name", s["symbol"]),
+            "direction": s.get("direction", ""),
+            "intensity": s.get("intensity", ""),
+            "strength": s.get("strength", 0),
+            "detail": f"Move {s.get('log_ret_pct', 0):+.2f}% ({s.get('sigma_mult', 0):.1f}sigma, RV22={s.get('rv22_annual_pct', 0):.1f}%)",
+            "date": s.get("date", ""),
+            "price": s.get("price", 0),
+        })
+    for h in hundred.get("signals", []):
+        alerts.append({
+            "type": "LEVEL_100",
+            "symbol": h.get("asset", h.get("symbol", "")),
+            "name": h.get("asset", ""),
+            "direction": "DOWN" if "+" in h.get("level", "") else "UP",
+            "intensity": h.get("bias", ""),
+            "strength": 4 if "150" in h.get("level", "") else 3,
+            "detail": f"Touche {h.get('level', '')} a {h.get('level_price', 0)} — {h.get('cross_type', '')}",
+            "date": h.get("date", ""),
+            "time": h.get("time", ""),
+            "price": h.get("price", 0),
+        })
+    # Tri par force decroissante
+    alerts.sort(key=lambda a: a.get("strength", 0), reverse=True)
+    return {
+        "alerts": alerts,
+        "sigma_count": sigma.get("signal_count", 0),
+        "hundred_pct_count": hundred.get("count", 0),
+        "total": len(alerts),
+        "timestamp": sigma.get("timestamp"),
+    }

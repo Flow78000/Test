@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, Card, LiveBadge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { loadStrategy, type Leg, type StrategyTemplate, LEVEL_COLORS } from "@/data/option-strategies";
 import { StrategyPicker } from "./strategy-picker";
 import { LegBuilder } from "./leg-builder";
@@ -67,7 +68,7 @@ export default function OptionLabPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <PageHeader title="Option Lab" subtitle="58 strategies, simulation P&L, conseil intelligent et sizing">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Option Lab" subtitle="58 strategies, simulation P&L, conseil intelligent et sizing">
         {/* Underlying selector */}
         <select value={underlying} onChange={e => { setUnderlying(e.target.value); }}
           className="bg-[#111114] border border-[#1E1E22] rounded-lg px-3 py-1.5 text-xs text-white focus:border-[#FF6B00] focus:outline-none">

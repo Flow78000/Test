@@ -12,8 +12,10 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routers import sierra, regime, market, proxy_uw
+from routers import sierra, regime, market, proxy_uw, menthorq, messages, pricing, news
 from services.tws import connect_tws, disconnect_tws, qualify_all, ensure_connected
+from services.news_archive import start_news_archiver, stop_news_archiver
+from services.range_scheduler import start_range_scheduler, stop_range_scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,6 +24,16 @@ async def lifespan(app: FastAPI):
     print("  ===========================")
     connect_tws()
     qualify_all()
+    # Background: news archive with 2-week rolling retention
+    try:
+        start_news_archiver()
+    except Exception as e:
+        print(f"  [FLO.W] News archiver start error: {e}")
+    # Background: range matrix refresh every 5 minutes (intraday snapshots)
+    try:
+        start_range_scheduler()
+    except Exception as e:
+        print(f"  [FLO.W] Range scheduler start error: {e}")
     # Auto-collect vol desk snapshot if TWS is connected
     from services.tws import ib_connected, ib
     if ib_connected:
@@ -38,6 +50,14 @@ async def lifespan(app: FastAPI):
             print(f"  [FLO.W] Vol Desk auto-collect error: {e}")
     yield
     # Shutdown
+    try:
+        stop_news_archiver()
+    except Exception:
+        pass
+    try:
+        stop_range_scheduler()
+    except Exception:
+        pass
     disconnect_tws()
     print("  [FLO.W] Shutdown complete")
 
@@ -74,6 +94,11 @@ app.include_router(sierra.router, prefix="/api/sierra", tags=["Sierra Chart"])
 app.include_router(regime.router, prefix="/api/regime", tags=["Regime Engine"])
 app.include_router(market.router, prefix="/api/market", tags=["Market Data"])
 app.include_router(proxy_uw.router, prefix="/api/uw", tags=["Unusual Whales Proxy"])
+app.include_router(menthorq.router, prefix="/api/menthorq", tags=["FLO.Q (legacy path)"])
+app.include_router(menthorq.router, prefix="/api/floq", tags=["FLO.Q"])
+app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
+app.include_router(pricing.router, prefix="/api/pricing", tags=["Pricing Lab"])
+app.include_router(news.router, prefix="/api/news", tags=["News Archive"])
 
 @app.get("/api/health")
 def health():

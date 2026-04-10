@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge, KpiCard } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
@@ -28,7 +29,6 @@ export default function TermStructurePage() {
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError("");
     try {
       const res = await fetch(`${API}/api/uw/iv-rank?ticker=SPY`).then(r => r.json());
@@ -54,28 +54,20 @@ export default function TermStructurePage() {
   const structColor = structure === "CONTANGO" ? "#4CAF50" : "#EF4444";
   const spread = vix3m - vix;
 
-  if (loading) return (
-    <div className="p-6">
-      <PageHeader title="Structure de Terme VIX" subtitle="Courbe de volatilite par echeance" />
-      <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-6">
-      <PageHeader title="Structure de Terme VIX" subtitle="Courbe de volatilite par echeance" />
-      <Card className="p-8 text-center text-red-400">{error}</Card>
-    </div>
-  );
-
   return (
     <div className="p-6">
-      <PageHeader title="Structure de Terme VIX" subtitle="Courbe de volatilite par echeance — VIX futures et options">
-        <Badge color={structColor}>{structure}</Badge>
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Structure de Terme VIX" subtitle="Courbe de volatilite par echeance — VIX futures et options">
+        {data && <Badge color={structColor}>{structure}</Badge>}
         <button onClick={load} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">Rafraichir</button>
         <LiveBadge />
       </PageHeader>
 
+      {loading && !data ? (
+        <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
+      ) : error && !data ? (
+        <Card className="p-8 text-center text-red-400">{error}</Card>
+      ) : (
+        <>
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-4 mb-4">
         {chartData.map(c => (
@@ -103,6 +95,8 @@ export default function TermStructurePage() {
           </LineChart>
         </ResponsiveContainer>
       </Card>
+        </>
+      )}
     </div>
   );
 }

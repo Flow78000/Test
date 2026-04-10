@@ -94,20 +94,30 @@ export function PageHeader({
   title,
   subtitle,
   children,
+  timer,
 }: {
   title: string;
   subtitle?: string;
   children?: ReactNode;
+  /** Compteur de refresh rendu en haut a gauche, au-dessus du titre */
+  timer?: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-4 mb-6 flex-wrap">
-      <div>
-        <h1 className="text-xl font-extrabold">{title}</h1>
-        {subtitle && (
-          <p className="text-xs text-[#6B6B75] mt-1">{subtitle}</p>
-        )}
+    <div className="mb-6">
+      {timer && (
+        <div className="mb-2 flex">
+          {timer}
+        </div>
+      )}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-extrabold">{title}</h1>
+          {subtitle && (
+            <p className="text-xs text-[#6B6B75] mt-1">{subtitle}</p>
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-3">{children}</div>
       </div>
-      <div className="ml-auto flex items-center gap-3">{children}</div>
     </div>
   );
 }

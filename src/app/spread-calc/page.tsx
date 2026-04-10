@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { PageHeader, Card, KpiCard } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   LineChart,
   Line,
@@ -284,6 +285,7 @@ export default function SpreadCalcPage() {
   return (
     <div className="p-6 space-y-6">
       <PageHeader
+        timer={<RefreshTimer intervalSeconds={10} />}
         title="Calculateur de Spreads"
         subtitle="Construction et analyse de strategies options multi-jambes"
       />

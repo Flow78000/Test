@@ -11,6 +11,14 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "FLO.W — Flow Liquidity & Options Warehouse",
   description: "Quant Vol Desk — Dark Pool, GEX, Regime Switching, Sierra Chart Signals",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/apple-icon.svg", type: "image/svg+xml" },
+    ],
+  },
 };
 
 export default function RootLayout({

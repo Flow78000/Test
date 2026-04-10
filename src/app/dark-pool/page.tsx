@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader, Card, KpiCard, Badge, LiveBadge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -45,7 +46,6 @@ export default function DarkPoolPage() {
   const [ticker, setTicker] = useState("SPY");
 
   async function load() {
-    setLoading(true);
     try {
       const [regimeResp, printsResp, histResp] = await Promise.allSettled([
         fetch(`${API}/api/regime/full`).then(r => r.json()),
@@ -65,7 +65,7 @@ export default function DarkPoolPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); const i = setInterval(load, 60000); return () => clearInterval(i); }, [ticker]);
+  useEffect(() => { load(); const i = setInterval(load, 10000); return () => clearInterval(i); }, [ticker]);
 
   const dp = regime?.layers?.dark_pool || {};
 
@@ -159,7 +159,7 @@ export default function DarkPoolPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Dark Pool Intelligence" subtitle={`Proxy DIX — Prints institutionnels ${ticker}`}>
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Dark Pool Intelligence" subtitle={`Proxy DIX — Prints institutionnels ${ticker}`}>
         <select value={ticker} onChange={e => setTicker(e.target.value)} className="text-xs">
           <option value="SPY">SPY</option>
           <option value="QQQ">QQQ</option>

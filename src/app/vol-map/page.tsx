@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, KpiCard, Badge, LiveBadge, PageHeader } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -126,7 +127,6 @@ export default function VolMapPage() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        setLoading(true);
         setError(null);
 
         const [ivRes, strikeRes] = await Promise.allSettled([
@@ -190,6 +190,7 @@ export default function VolMapPage() {
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
       <PageHeader
+        timer={<RefreshTimer intervalSeconds={10} />}
         title="Carte de Volatilite"
         subtitle="Analyse institutionnelle — Regime, Surface, Mecaniques de Dealers"
       >

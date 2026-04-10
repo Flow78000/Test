@@ -1,291 +1,377 @@
 "use client";
-import { Card, PageHeader, Badge } from "@/components/ui/card";
 
-function Th({ children }: { children: React.ReactNode }) { return <th className="text-left p-2 text-[#6B6B75] text-[10px] uppercase tracking-wide">{children}</th>; }
+import { useState, useEffect, useCallback } from "react";
+import { Card, PageHeader, Badge, LiveBadge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
+} from "recharts";
 
-/* ── IV color scale ── */
-function ivColor(v: number): string {
-  if (v < 14) return "#42A5F5";
-  if (v < 18) return "#66BB6A";
-  if (v < 22) return "#FFA726";
-  if (v < 28) return "#FF7043";
+const API = "http://localhost:3850";
+const WATCHLIST = ["SPY", "QQQ", "IWM", "DIA", "AAPL", "NVDA", "TSLA", "GLD", "TLT"];
+
+interface AtmRow {
+  dte: string;
+  iv: number | null;
+  samples: number;
+}
+interface SkewRow {
+  dte: string;
+  put_iv: number | null;
+  call_iv: number | null;
+  skew: number | null;
+}
+interface Stats {
+  min_iv: number;
+  max_iv: number;
+  avg_iv: number;
+  total_contracts: number;
+  total_raw_contracts: number;
+}
+interface SurfaceResponse {
+  ok: boolean;
+  ticker: string;
+  spot: number;
+  vix: number;
+  atm: number;
+  moneyness: string[];
+  dtes: string[];
+  surface: (number | null)[][];
+  sample_size: number[][];
+  atm_term: AtmRow[];
+  skew_25d: SkewRow[];
+  stats: Stats;
+  generated_at: string;
+  error?: string;
+}
+
+/* ── IV color scale — auto range ── */
+function ivColor(v: number | null, min: number, max: number): string {
+  if (v === null) return "#1A1A1E";
+  if (max <= min) return "#FFA726";
+  const t = Math.max(0, Math.min(1, (v - min) / (max - min)));
+  // blue -> green -> orange -> red
+  if (t < 0.25) return "#42A5F5";
+  if (t < 0.5) return "#66BB6A";
+  if (t < 0.75) return "#FFA726";
+  if (t < 0.9) return "#FF7043";
   return "#EF4444";
 }
-function IvCell({ v }: { v: number }) {
+
+function IvCell({ v, n, min, max }: { v: number | null; n: number; min: number; max: number }) {
+  const color = ivColor(v, min, max);
   return (
-    <td className="p-1.5 text-center text-[11px] font-mono border border-[#1E1E22]" style={{ color: ivColor(v), backgroundColor: `${ivColor(v)}10` }}>
-      {v.toFixed(1)}
+    <td
+      className="p-1.5 text-center text-[11px] font-mono border border-[#1E1E22]"
+      style={{
+        color: v === null ? "#6B6B75" : color,
+        backgroundColor: v === null ? "#0D0D10" : `${color}15`,
+      }}
+      title={`IV ${v?.toFixed(2) ?? "--"}% (${n} contrats)`}
+    >
+      {v === null ? "—" : v.toFixed(1)}
     </td>
   );
 }
-
-/* ── Greek heatmap color ── */
-function gkColor(v: number, max: number): string {
-  const ratio = v / max;
-  if (ratio > 0.75) return "#EF4444";
-  if (ratio > 0.5) return "#FFA726";
-  if (ratio > 0.25) return "#66BB6A";
-  return "#42A5F5";
-}
-function GkCell({ v, max }: { v: number; max: number }) {
-  return (
-    <td className="p-1 text-center text-[10px] font-mono border border-[#1E1E22]" style={{ color: gkColor(v, max), backgroundColor: `${gkColor(v, max)}10` }}>
-      {v.toFixed(2)}
-    </td>
-  );
-}
-
-/* ── Vol Surface data (12 moneyness x 8 DTE) ── */
-const moneyness = ["80%", "85%", "90%", "92%", "95%", "97%", "100%", "102%", "105%", "108%", "110%", "115%"];
-const dtes = ["7", "14", "21", "30", "45", "60", "90", "120"];
-const volSurface: number[][] = [
-  [38.2, 34.1, 31.8, 29.5, 27.6, 26.2, 24.8, 23.9],
-  [33.5, 30.2, 28.4, 26.8, 25.4, 24.3, 23.2, 22.6],
-  [28.4, 26.1, 24.8, 23.6, 22.7, 22.0, 21.2, 20.8],
-  [26.1, 24.3, 23.2, 22.2, 21.5, 20.9, 20.3, 19.9],
-  [22.8, 21.6, 20.8, 20.1, 19.6, 19.2, 18.8, 18.5],
-  [20.1, 19.4, 18.9, 18.4, 18.1, 17.8, 17.5, 17.3],
-  [18.2, 17.8, 17.5, 17.2, 17.0, 16.8, 16.6, 16.5],
-  [19.5, 18.8, 18.3, 17.9, 17.6, 17.3, 17.1, 16.9],
-  [22.1, 21.0, 20.3, 19.7, 19.2, 18.9, 18.5, 18.3],
-  [25.4, 23.8, 22.8, 22.0, 21.3, 20.8, 20.2, 19.8],
-  [27.8, 25.9, 24.7, 23.7, 22.9, 22.3, 21.6, 21.1],
-  [33.1, 30.5, 28.8, 27.3, 26.1, 25.2, 24.1, 23.4],
-];
-
-/* ── Greeks surfaces (6 moneyness x 4 DTE) ── */
-const gkMoney = ["90%", "95%", "100%", "105%", "110%", "115%"];
-const gkDte = ["7", "14", "30", "60"];
-
-const gammaSurface = [
-  [0.02, 0.04, 0.06, 0.05],
-  [0.05, 0.08, 0.10, 0.07],
-  [0.18, 0.14, 0.09, 0.06],
-  [0.06, 0.09, 0.10, 0.08],
-  [0.03, 0.05, 0.07, 0.06],
-  [0.01, 0.02, 0.04, 0.04],
-];
-const vannaSurface = [
-  [0.15, 0.12, 0.08, 0.05],
-  [0.12, 0.10, 0.07, 0.04],
-  [0.02, 0.03, 0.02, 0.01],
-  [0.08, 0.07, 0.05, 0.03],
-  [0.14, 0.11, 0.08, 0.05],
-  [0.18, 0.14, 0.10, 0.07],
-];
-const charmSurface = [
-  [0.03, 0.05, 0.04, 0.02],
-  [0.06, 0.08, 0.05, 0.03],
-  [0.22, 0.15, 0.08, 0.04],
-  [0.07, 0.09, 0.06, 0.03],
-  [0.04, 0.06, 0.04, 0.02],
-  [0.02, 0.03, 0.02, 0.01],
-];
 
 export default function SurfacePage() {
+  const [ticker, setTicker] = useState("SPY");
+  const [data, setData] = useState<SurfaceResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (t: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await fetch(`${API}/api/uw/vol-surface?ticker=${t}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const json = await r.json();
+      if (!json.ok) throw new Error(json.error || "Unknown error");
+      setData(json);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load(ticker);
+    const t = setInterval(() => load(ticker), 60000);
+    return () => clearInterval(t);
+  }, [ticker, load]);
+
+  const atmChartData =
+    data?.atm_term
+      .filter((a) => a.iv !== null)
+      .map((a) => ({
+        dte: Number(a.dte),
+        iv: a.iv,
+        samples: a.samples,
+      })) || [];
+
+  const skewChartData =
+    data?.skew_25d
+      .filter((s) => s.skew !== null)
+      .map((s) => ({
+        dte: Number(s.dte),
+        skew: s.skew,
+        put: s.put_iv,
+        call: s.call_iv,
+      })) || [];
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       <PageHeader
-        title="Surface Analytique — Derivees Secondes"
-        subtitle="Gamma, Vanna, Volga — Surface d'exposition par strike et echeance"
+        timer={<RefreshTimer intervalSeconds={60} />}
+        title="Surface Volatilite"
+        subtitle="IV surface reelle — smile, term structure, skew 25 delta"
       >
-        <Badge color="#FFA726">Quant</Badge>
+        <select
+          value={ticker}
+          onChange={(e) => setTicker(e.target.value)}
+          className="bg-[#111114] border border-[#1E1E22] rounded-lg px-3 py-1.5 text-xs text-white"
+        >
+          {WATCHLIST.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <LiveBadge />
       </PageHeader>
 
-      {/* ═══ Section 1: Vol Surface Heatmap ═══ */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-sm font-bold text-[#FFA726] uppercase tracking-wider mb-4">Implied Volatility Surface</h2>
-        <p className="text-xs text-[#6B6B75] mb-4">
-          IV par moneyness (strike/spot) et echeance (DTE). Colonnes = jours avant expiration. Lignes = moneyness.
-          Le smile est visible : IV elevee deep OTM put (80%) et OTM call (115%), minimum ATM (100%).
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-[#1E1E22]">
-                <Th>Moneyness</Th>
-                {dtes.map((d) => <Th key={d}>{d} DTE</Th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {moneyness.map((m, i) => (
-                <tr key={m} className={m === "100%" ? "bg-[#FFA72608]" : ""}>
-                  <td className={`p-2 text-[11px] font-mono font-bold ${m === "100%" ? "text-[#FFA726]" : "text-[#6B6B75]"}`}>{m}</td>
-                  {volSurface[i].map((v, j) => <IvCell key={j} v={v} />)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center gap-4 mt-3 text-[10px] text-[#6B6B75]">
-          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#42A5F5" }} /> &lt;14</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#66BB6A" }} /> 14-18</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#FFA726" }} /> 18-22</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#FF7043" }} /> 22-28</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#EF4444" }} /> &gt;28</span>
-        </div>
-      </Card>
+      {loading && !data ? (
+        <Card className="p-12 text-center text-[#6B6B75]">
+          Construction de la surface IV pour {ticker}...
+        </Card>
+      ) : error ? (
+        <Card className="p-12 text-center text-[#6B6B75]">
+          <span className="text-[#FF6B00] font-semibold">Erreur</span>
+          <div className="text-xs mt-2">{error}</div>
+        </Card>
+      ) : data ? (
+        <>
+          {/* Market snapshot KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4">
+            <Card className="p-3">
+              <div className="text-[9px] uppercase text-[#6B6B75]">Ticker</div>
+              <div className="text-xl font-extrabold font-mono text-[#FF6B00]">{data.ticker}</div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-[9px] uppercase text-[#6B6B75]">Spot</div>
+              <div className="text-xl font-extrabold font-mono text-[#F0F0F0]">
+                ${data.spot.toFixed(2)}
+              </div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-[9px] uppercase text-[#6B6B75]">VIX</div>
+              <div className="text-xl font-extrabold font-mono text-[#FFA726]">
+                {data.vix.toFixed(2)}
+              </div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-[9px] uppercase text-[#6B6B75]">IV moyen</div>
+              <div className="text-xl font-extrabold font-mono text-[#42A5F5]">
+                {data.stats.avg_iv.toFixed(1)}%
+              </div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-[9px] uppercase text-[#6B6B75]">IV range</div>
+              <div className="text-xl font-extrabold font-mono text-[#B388FF]">
+                {data.stats.min_iv.toFixed(0)}–{data.stats.max_iv.toFixed(0)}%
+              </div>
+            </Card>
+            <Card className="p-3">
+              <div className="text-[9px] uppercase text-[#6B6B75]">Contrats</div>
+              <div className="text-xl font-extrabold font-mono text-[#F0F0F0]">
+                {data.stats.total_contracts}
+              </div>
+              <div className="text-[9px] text-[#6B6B75]">/ {data.stats.total_raw_contracts}</div>
+            </Card>
+          </div>
 
-      {/* ═══ Section 2: Greeks Surface ═══ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        {/* Gamma */}
-        <Card className="p-4">
-          <h3 className="text-xs font-bold text-[#EF4444] uppercase tracking-wider mb-2">Gamma Surface</h3>
-          <p className="text-[10px] text-[#6B6B75] mb-3">Maximum ATM short-dated. Dealers short gamma pres de l&apos;expiration.</p>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead><tr className="border-b border-[#1E1E22]"><Th>K</Th>{gkDte.map(d => <Th key={d}>{d}d</Th>)}</tr></thead>
-              <tbody>
-                {gkMoney.map((m, i) => (
-                  <tr key={m}><td className="p-1 text-[10px] font-mono text-[#6B6B75]">{m}</td>
-                    {gammaSurface[i].map((v, j) => <GkCell key={j} v={v} max={0.18} />)}
+          {/* IV Surface heatmap */}
+          <Card className="p-4 mb-4">
+            <h2 className="text-sm font-bold text-[#FFA726] uppercase tracking-wider mb-2">
+              Implied Volatility Surface — {data.ticker}
+            </h2>
+            <p className="text-xs text-[#6B6B75] mb-4">
+              IV reelle par moneyness (strike/spot) et echeance (DTE). Les colonnes sont les
+              jours avant expiration. Lignes = strike relatif au spot (100% = ATM). Le smile est
+              visible : IV elevee sur les puts OTM (ailes gauches) et OTM calls (ailes droites).
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-[#1E1E22]">
+                    <th className="text-left p-2 text-[#6B6B75] text-[10px] uppercase tracking-wide">
+                      Moneyness
+                    </th>
+                    {data.dtes.map((d) => (
+                      <th
+                        key={d}
+                        className="text-center p-2 text-[#6B6B75] text-[10px] uppercase tracking-wide"
+                      >
+                        {d}d
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </thead>
+                <tbody>
+                  {data.moneyness.map((m, i) => (
+                    <tr key={m} className={m === "100%" ? "bg-[#FFA72608]" : ""}>
+                      <td
+                        className={`p-2 text-[11px] font-mono font-bold ${
+                          m === "100%" ? "text-[#FFA726]" : "text-[#6B6B75]"
+                        }`}
+                      >
+                        {m}
+                      </td>
+                      {data.surface[i].map((v, j) => (
+                        <IvCell
+                          key={j}
+                          v={v}
+                          n={data.sample_size[i][j]}
+                          min={data.stats.min_iv}
+                          max={data.stats.max_iv}
+                        />
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center gap-3 mt-3 text-[10px] text-[#6B6B75]">
+              <span>Echelle:</span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#42A5F5" }} /> bas
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#66BB6A" }} /> bas+
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#FFA726" }} /> moy
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#FF7043" }} /> haut
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: "#EF4444" }} /> haut+
+              </span>
+              <span className="ml-auto">
+                Genere {new Date(data.generated_at).toLocaleTimeString("fr-FR")}
+              </span>
+            </div>
+          </Card>
 
-        {/* Vanna */}
-        <Card className="p-4">
-          <h3 className="text-xs font-bold text-[#B388FF] uppercase tracking-wider mb-2">Vanna Surface</h3>
-          <p className="text-[10px] text-[#6B6B75] mb-3">Maximum OTM wings short-dated. Drive les delta shifts lors des moves de vol.</p>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead><tr className="border-b border-[#1E1E22]"><Th>K</Th>{gkDte.map(d => <Th key={d}>{d}d</Th>)}</tr></thead>
-              <tbody>
-                {gkMoney.map((m, i) => (
-                  <tr key={m}><td className="p-1 text-[10px] font-mono text-[#6B6B75]">{m}</td>
-                    {vannaSurface[i].map((v, j) => <GkCell key={j} v={v} max={0.18} />)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* ATM Term Structure */}
+            <Card className="p-4">
+              <h3 className="text-xs font-bold text-[#42A5F5] uppercase tracking-wider mb-2">
+                Term Structure ATM
+              </h3>
+              <p className="text-[10px] text-[#6B6B75] mb-3">
+                IV des options ATM (±3% du spot) par echeance. Pente haussiere = contango
+                (normal) / pente baissiere = backwardation (stress).
+              </p>
+              {atmChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={atmChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
+                    <XAxis dataKey="dte" tick={{ fill: "#6B6B75", fontSize: 10 }} label={{ value: "DTE", fill: "#6B6B75", fontSize: 10, position: "insideBottom", offset: -4 }} />
+                    <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#111114",
+                        border: "1px solid #1E1E22",
+                        borderRadius: 8,
+                        fontSize: 11,
+                      }}
+                    />
+                    <ReferenceLine y={data.vix} stroke="#FFA726" strokeDasharray="3 3" label={{ value: `VIX ${data.vix.toFixed(1)}`, fill: "#FFA726", fontSize: 9 }} />
+                    <Line
+                      dataKey="iv"
+                      stroke="#42A5F5"
+                      strokeWidth={2}
+                      dot={{ r: 4, fill: "#42A5F5" }}
+                      name="IV ATM"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center py-8 text-[#6B6B75] text-xs">
+                  Pas assez de samples ATM
+                </div>
+              )}
+            </Card>
 
-        {/* Charm */}
-        <Card className="p-4">
-          <h3 className="text-xs font-bold text-[#42A5F5] uppercase tracking-wider mb-2">Charm Surface</h3>
-          <p className="text-[10px] text-[#6B6B75] mb-3">Maximum ATM pres de l&apos;expiration. Decay du delta = OPEX pin effect.</p>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead><tr className="border-b border-[#1E1E22]"><Th>K</Th>{gkDte.map(d => <Th key={d}>{d}d</Th>)}</tr></thead>
-              <tbody>
-                {gkMoney.map((m, i) => (
-                  <tr key={m}><td className="p-1 text-[10px] font-mono text-[#6B6B75]">{m}</td>
-                    {charmSurface[i].map((v, j) => <GkCell key={j} v={v} max={0.22} />)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {/* 25d Skew */}
+            <Card className="p-4">
+              <h3 className="text-xs font-bold text-[#B388FF] uppercase tracking-wider mb-2">
+                Skew 25-Delta (Put - Call)
+              </h3>
+              <p className="text-[10px] text-[#6B6B75] mb-3">
+                Ecart IV entre puts OTM ~5% et calls OTM ~5%. Un skew positif indique que les
+                puts sont plus chers (demande de protection).
+              </p>
+              {skewChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={skewChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E1E22" />
+                    <XAxis dataKey="dte" tick={{ fill: "#6B6B75", fontSize: 10 }} />
+                    <YAxis tick={{ fill: "#6B6B75", fontSize: 10 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#111114",
+                        border: "1px solid #1E1E22",
+                        borderRadius: 8,
+                        fontSize: 11,
+                      }}
+                    />
+                    <ReferenceLine y={0} stroke="#6B6B75" />
+                    <Line dataKey="put" stroke="#EF4444" strokeWidth={1.5} dot={{ r: 3, fill: "#EF4444" }} name="Put IV" />
+                    <Line dataKey="call" stroke="#22C55E" strokeWidth={1.5} dot={{ r: 3, fill: "#22C55E" }} name="Call IV" />
+                    <Line dataKey="skew" stroke="#B388FF" strokeWidth={2} dot={{ r: 4, fill: "#B388FF" }} name="Skew" />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center py-8 text-[#6B6B75] text-xs">
+                  Pas assez de samples OTM
+                </div>
+              )}
+            </Card>
           </div>
-        </Card>
-      </div>
 
-      {/* ═══ Section 3: Second-Order Greeks Explained ═══ */}
-      <div className="text-xs text-[#6B6B75] uppercase tracking-[3px] font-semibold mb-4">Derivees Secondes — Reference</div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <Card className="p-5">
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-lg font-black text-[#EF4444]">&Gamma;</span>
-            <span className="text-sm font-bold">Gamma</span>
-            <span className="text-[10px] text-[#6B6B75] font-mono ml-auto">&part;&#178;V / &part;S&#178;</span>
-          </div>
-          <p className="text-xs text-[#6B6B75] leading-relaxed">
-            Convexite du prix de l&apos;option par rapport au sous-jacent. Le gamma est maximal ATM short-dated.
-            Les dealers short gamma doivent hedger en achetant quand le marche monte et vendant quand il baisse
-            — ce qui amplifie les mouvements intraday. Gamma scalping = le hedge dynamique de cette exposition.
-          </p>
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-lg font-black text-[#B388FF]">V</span>
-            <span className="text-sm font-bold">Vanna</span>
-            <span className="text-[10px] text-[#6B6B75] font-mono ml-auto">&part;&#178;V / &part;S&part;&sigma;</span>
-          </div>
-          <p className="text-xs text-[#6B6B75] leading-relaxed">
-            Interaction entre delta et volatilite. Quand la vol augmente (VIX spike), le delta des options
-            OTM augmente — les dealers doivent re-hedger, creant des flows directionnels. Le vanna flow
-            est le principal mecanisme de transmission vol -&gt; spot sur les marches modernes.
-          </p>
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-lg font-black text-[#FFA726]">V</span>
-            <span className="text-sm font-bold">Volga</span>
-            <span className="text-[10px] text-[#6B6B75] font-mono ml-auto">&part;&#178;V / &part;&sigma;&#178;</span>
-          </div>
-          <p className="text-xs text-[#6B6B75] leading-relaxed">
-            Convexite du prix de l&apos;option par rapport a la vol. Le volga est maximal sur les ailes (deep OTM).
-            Il drive la pricing du skew : les options OTM avec volga eleve coutent plus car elles profitent
-            d&apos;un spike de vol. Les risk reversals et les skew trades sont essentiellement des trades de volga.
-          </p>
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-lg font-black text-[#42A5F5]">&chi;</span>
-            <span className="text-sm font-bold">Charm</span>
-            <span className="text-[10px] text-[#6B6B75] font-mono ml-auto">&part;&#178;V / &part;S&part;t</span>
-          </div>
-          <p className="text-xs text-[#6B6B75] leading-relaxed">
-            Decay du delta dans le temps. A l&apos;approche de l&apos;expiration, les delta des options ATM
-            convergent vers 0 ou 1 — le charm accelere ce mouvement. C&apos;est le driver principal
-            du pin effect a l&apos;OPEX : les dealers hedgent le charm decay en poussant le spot vers le strike max OI.
-          </p>
-        </Card>
-      </div>
-
-      {/* ═══ Section 4: Practical Trading Rules ═══ */}
-      <Card className="p-6 mb-8">
-        <h2 className="text-sm font-bold text-[#22C55E] uppercase tracking-wider mb-4">Decision Matrix — Quel Greek Domine?</h2>
-        <p className="text-xs text-[#6B6B75] mb-4">
-          Identifiez la condition de marche, puis concentrez votre analyse sur le greek primaire.
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#1E1E22]">
-                <th className="text-left p-3 text-[#6B6B75] text-xs uppercase tracking-wide">Condition</th>
-                <th className="text-left p-3 text-[#6B6B75] text-xs uppercase tracking-wide">Greek Primaire</th>
-                <th className="text-left p-3 text-[#6B6B75] text-xs uppercase tracking-wide">Action Trading</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1A1A1E]">
-              <tr className="hover:bg-[#FFA72606]">
-                <td className="p-3 text-sm">Proche expiration (0-3 DTE)</td>
-                <td className="p-3 text-sm font-mono text-[#EF4444]">Charm + Gamma</td>
-                <td className="p-3 text-sm text-[#6B6B75]">Pin risk, gamma scalping, attention aux moves violents post-3pm</td>
-              </tr>
-              <tr className="hover:bg-[#FFA72606]">
-                <td className="p-3 text-sm">VIX spike (&gt; +3 pts intraday)</td>
-                <td className="p-3 text-sm font-mono text-[#B388FF]">Vanna</td>
-                <td className="p-3 text-sm text-[#6B6B75]">Delta shifts massifs, dealers forcees de hedger = amplification du move</td>
-              </tr>
-              <tr className="hover:bg-[#FFA72606]">
-                <td className="p-3 text-sm">Mouvement de skew (25d RR shift)</td>
-                <td className="p-3 text-sm font-mono text-[#FFA726]">Volga</td>
-                <td className="p-3 text-sm text-[#6B6B75]">Risk reversal trades, put spread vs call spread repricing</td>
-              </tr>
-              <tr className="hover:bg-[#FFA72606]">
-                <td className="p-3 text-sm">Rallye lent + vol basse</td>
-                <td className="p-3 text-sm font-mono text-[#42A5F5]">Charm</td>
-                <td className="p-3 text-sm text-[#6B6B75]">Decay systematique des puts OTM, dealers couvrent = support du spot</td>
-              </tr>
-              <tr className="hover:bg-[#FFA72606]">
-                <td className="p-3 text-sm">Marche range-bound ATM strike</td>
-                <td className="p-3 text-sm font-mono text-[#EF4444]">Gamma</td>
-                <td className="p-3 text-sm text-[#6B6B75]">Dealers long gamma = vendent les rallyes, achetent les dips = compression</td>
-              </tr>
-              <tr className="hover:bg-[#FFA72606]">
-                <td className="p-3 text-sm">Gros open interest sur un strike</td>
-                <td className="p-3 text-sm font-mono text-[#42A5F5]">Charm + Gamma</td>
-                <td className="p-3 text-sm text-[#6B6B75]">Magnet effect vers le strike, pin probable a l&apos;OPEX</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
+          {/* Educational panel — kept */}
+          <Card className="p-5 mb-4">
+            <h2 className="text-sm font-bold text-[#22C55E] uppercase tracking-wider mb-3">
+              Lecture de la surface
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-[#6B6B75] leading-relaxed">
+              <div>
+                <div className="font-bold text-[#F0F0F0] mb-1">Le smile</div>
+                Les OTM puts et calls ont toujours un IV superieur a l'ATM. Ce smile est la
+                traduction du skew : les marches anticipent les moves extremes plus souvent que
+                ne le predit une distribution log-normale.
+              </div>
+              <div>
+                <div className="font-bold text-[#F0F0F0] mb-1">Term structure</div>
+                En temps normal, les longues echeances cotent plus d'IV (contango — couvre
+                l'incertitude). En stress, la courbe s'inverse (backwardation) : l'IV court
+                terme depasse le long terme.
+              </div>
+              <div>
+                <div className="font-bold text-[#F0F0F0] mb-1">Skew 25d</div>
+                Skew = IV put 25d - IV call 25d. Plus c'est positif, plus les puts coutent
+                cher relativement aux calls — les acheteurs de protection dominent. Skew qui
+                s'ecrase = levee de couverture.
+              </div>
+            </div>
+          </Card>
+        </>
+      ) : null}
     </div>
   );
 }

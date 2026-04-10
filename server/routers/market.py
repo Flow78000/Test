@@ -30,6 +30,14 @@ def stress():
         return {"error": "TWS non connecte"}
     return fetch_quotes({"TLT", "HYG", "BTAL", "EEM", "UVXY", "SVXY"})
 
+@router.get("/systemic-risk")
+def systemic_risk():
+    """Composite Financial Stress Index base sur les donnees .dly locales
+    (aucune dependance TWS). Combine vol regime, stress Treasuries, energie,
+    FX safe haven, fuite vers l'or et contagion cross-asset."""
+    from services.systemic_risk import compute_systemic_risk
+    return compute_systemic_risk()
+
 @router.get("/reconnect")
 def reconnect():
     from services.tws import connect_tws, qualify_all
@@ -37,6 +45,46 @@ def reconnect():
     if ok:
         qualify_all()
     return {"reconnected": ok}
+
+@router.get("/tws/status")
+def tws_status():
+    """Verifie l'etat live de la connexion TWS (pas l'etat mis en cache a l'import)."""
+    from services import tws as tws_mod
+    live = False
+    try:
+        live = bool(tws_mod.ib and tws_mod.ib.isConnected())
+    except Exception:
+        live = False
+    return {
+        "connected": live,
+        "module_flag": tws_mod.ib_connected,
+        "host": tws_mod.TWS_HOST,
+        "port": tws_mod.TWS_PORT,
+        "qualified_count": len(tws_mod.qualified),
+    }
+
+@router.post("/tws/reconnect")
+def tws_reconnect():
+    """Force une reconnexion complete (disconnect + connect + qualify)."""
+    from services import tws as tws_mod
+    from services.tws import connect_tws, qualify_all, disconnect_tws
+    try:
+        disconnect_tws()
+    except Exception:
+        pass
+    ok = connect_tws()
+    if ok:
+        qualify_all()
+    live = False
+    try:
+        live = bool(tws_mod.ib and tws_mod.ib.isConnected())
+    except Exception:
+        live = False
+    return {
+        "reconnected": ok,
+        "connected": live,
+        "qualified_count": len(tws_mod.qualified),
+    }
 
 # ================================================================
 # Vol Desk Historical Data

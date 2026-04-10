@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   LineChart,
   Line,
@@ -74,7 +75,6 @@ export default function VolDeskPage() {
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError("");
     try {
       // Try vol-regime first, fallback to iv-rank
@@ -125,7 +125,7 @@ export default function VolDeskPage() {
 
   useEffect(() => {
     load();
-    const i = setInterval(load, 300_000);
+    const i = setInterval(load, 10_000);
     return () => clearInterval(i);
   }, [load]);
 
@@ -147,26 +147,10 @@ export default function VolDeskPage() {
 
   const vvix = current?.vvix ?? (iv > 0 ? Math.round(iv * 4.5 + 10) : 0);
 
-  if (loading)
-    return (
-      <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
-        <PageHeader title="Vol Desk" subtitle="Terminal de volatilite institutionnel" />
-        <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
-      </div>
-    );
-
-  if (error)
-    return (
-      <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
-        <PageHeader title="Vol Desk" subtitle="Terminal de volatilite institutionnel" />
-        <Card className="p-8 text-center text-red-400">{error}</Card>
-      </div>
-    );
-
   return (
     <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
-      <PageHeader title="Vol Desk" subtitle="Terminal de volatilite institutionnel">
-        <Badge color={tsBadgeColor}>{termStructure}</Badge>
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Vol Desk" subtitle="Terminal de volatilite institutionnel">
+        {current && <Badge color={tsBadgeColor}>{termStructure}</Badge>}
         <button
           onClick={load}
           className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors"
@@ -176,6 +160,12 @@ export default function VolDeskPage() {
         <LiveBadge />
       </PageHeader>
 
+      {loading && !current ? (
+        <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
+      ) : error && !current ? (
+        <Card className="p-8 text-center text-red-400">{error}</Card>
+      ) : (
+        <>
       {/* Row 1 — Core IV metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <KpiCard
@@ -302,6 +292,8 @@ export default function VolDeskPage() {
         <span>Source: /api/uw/iv-rank?ticker=SPY</span>
         <span>Actualisation auto 5 min</span>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 
 const API = "http://localhost:3850";
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
@@ -64,7 +65,6 @@ export default function CalendrierPage() {
   const [tz, setTz] = useState("ET");
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError("");
     try {
       const res = await fetch(`${API}/api/uw/economic-calendar`).then(r => r.json());
@@ -96,23 +96,9 @@ export default function CalendrierPage() {
 
   const weekLabel = `${weekDates[0]} au ${weekDates[4]}`;
 
-  if (loading) return (
-    <div className="p-6">
-      <PageHeader title="Calendrier Economique" subtitle="Evenements macro, FOMC, NFP, CPI" />
-      <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-6">
-      <PageHeader title="Calendrier Economique" subtitle="Evenements macro" />
-      <Card className="p-8 text-center text-red-400">{error}</Card>
-    </div>
-  );
-
   return (
     <div className="p-6 space-y-4">
-      <PageHeader title="Calendrier Economique" subtitle="Evenements macro, FOMC, NFP, CPI et publications cles">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Calendrier Economique" subtitle="Evenements macro, FOMC, NFP, CPI et publications cles">
         {/* Week nav */}
         <div className="flex bg-[#111114] border border-[#1E1E22] rounded-lg overflow-hidden">
           <button onClick={() => setWeekOffset(w => w - 1)} className="px-3 py-1.5 text-xs text-[#6B6B75] hover:text-white transition-colors">
@@ -140,6 +126,12 @@ export default function CalendrierPage() {
         <LiveBadge />
       </PageHeader>
 
+      {loading && !events.length ? (
+        <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
+      ) : error && !events.length ? (
+        <Card className="p-8 text-center text-red-400">{error}</Card>
+      ) : (
+        <>
       <div className="text-xs text-[#6B6B75] -mt-2">{weekLabel}</div>
 
       {/* ── 5-column grid ── */}
@@ -233,6 +225,8 @@ export default function CalendrierPage() {
           );
         })}
       </div>
+        </>
+      )}
     </div>
   );
 }

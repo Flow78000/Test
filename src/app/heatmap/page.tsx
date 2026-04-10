@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   AreaChart, Area, LineChart, Line, BarChart, Bar, ComposedChart,
@@ -326,7 +327,7 @@ export default function HeatmapPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5 * 60_000);
+    const interval = setInterval(fetchData, 10_000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -391,18 +392,16 @@ export default function HeatmapPage() {
 
   return (
     <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
-      <PageHeader title="Heatmap Sectorielle" subtitle="Carte thermique des flux d'options par secteur ETF">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Heatmap Sectorielle" subtitle="Carte thermique des flux d'options par secteur ETF">
         <LiveBadge />
       </PageHeader>
 
-      {loading ? (
+      {loading && !sectors.length ? (
         <Card className="p-12 text-center text-[#6B6B75]">Chargement...</Card>
-      ) : error ? (
+      ) : error && !sectors.length ? (
         <Card className="p-12 text-center text-[#6B6B75]">
-          Lancez le serveur :{" "}
-          <code className="bg-[#08080A] px-2 py-1 rounded text-[#FF6B00]">
-            cd D:\flo-w\server && python main.py
-          </code>
+          <span className="text-[#FF6B00] font-semibold">Reconnexion automatique en cours...</span>
+          <div className="text-xs mt-2 text-[#6B6B75]">Le serveur se reconnecte tout seul — aucune action requise.</div>
         </Card>
       ) : (
         <>

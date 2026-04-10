@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
   ResponsiveContainer, Area, AreaChart
@@ -26,7 +27,6 @@ export default function RegimePage() {
   const [loading, setLoading] = useState(true);
 
   async function loadRegime() {
-    setLoading(true);
     try {
       const resp = await fetch("http://localhost:3850/api/regime/full");
       const json = await resp.json();
@@ -35,7 +35,7 @@ export default function RegimePage() {
     setLoading(false);
   }
 
-  useEffect(() => { loadRegime(); const i = setInterval(loadRegime, 60000); return () => clearInterval(i); }, []);
+  useEffect(() => { loadRegime(); const i = setInterval(loadRegime, 10000); return () => clearInterval(i); }, []);
 
   const regime = data?.regime || {};
   const layers = data?.layers || {};
@@ -89,14 +89,14 @@ export default function RegimePage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Regime Engine" subtitle="VIX Regime Switching — Dark Pool + GEX + Flow">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Regime Engine" subtitle="VIX Regime Switching — Dark Pool + GEX + Flow">
         <button onClick={loadRegime} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
           Rafraichir
         </button>
         <LiveBadge />
       </PageHeader>
 
-      {loading ? (
+      {loading && !data ? (
         <div className="text-center py-20 text-[#6B6B75]">Calcul du regime en cours...</div>
       ) : (
         <>

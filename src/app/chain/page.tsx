@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,33 +76,52 @@ function MarketStatus() {
 }
 
 function parseOptionSymbol(sym: string): { strike: number; type: "call" | "put" } | null {
-  if (!sym || sym.length < 15) return null;
-  const typeChar = sym.match(/[CP]/)?.[0];
-  if (!typeChar) return null;
-  const idx = sym.indexOf(typeChar, 6);
-  const rawStrike = sym.slice(idx + 1);
-  const strike = parseInt(rawStrike, 10) / 1000;
-  return { strike, type: typeChar === "C" ? "call" : "put" };
-}
-
-function generateUpcomingFridays(count = 8): string[] {
-  const fridays: string[] = [];
-  const d = new Date();
-  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
-  const today = new Date();
-  if (today.getDay() <= 5 && today.getDay() !== 0) {
-    const thisFri = new Date(today);
-    thisFri.setDate(today.getDate() + (5 - today.getDay()));
-    if (thisFri >= today) {
-      fridays.push(formatDate(thisFri));
+  if (!sym || sym.length < 10) return null;
+  // Find C or P after index 6 (skip ticker prefix like SPX, SPXW, SPY, etc.)
+  // Symbol format: SPXW260409C06800000 or SPX260417P06800000
+  for (let i = 6; i < sym.length; i++) {
+    if ((sym[i] === "C" || sym[i] === "P") && i + 1 < sym.length) {
+      const rest = sym.slice(i + 1);
+      if (/^\d+$/.test(rest)) {
+        const strike = parseInt(rest, 10) / 1000;
+        return { strike, type: sym[i] === "C" ? "call" : "put" };
+      }
     }
   }
-  for (let i = 0; i < count; i++) {
-    const fd = formatDate(d);
-    if (!fridays.includes(fd)) fridays.push(fd);
-    d.setDate(d.getDate() + 7);
+  return null;
+}
+
+function generateUpcomingDates(count = 12): string[] {
+  // SPX has daily expirations (0DTE), generate next N business days + monthly Fridays
+  const dates: string[] = [];
+  const today = new Date();
+  // Add today + next 7 business days
+  const d = new Date(today);
+  for (let i = 0; i < 10 && dates.length < 8; i++) {
+    if (d.getDay() !== 0 && d.getDay() !== 6) {
+      dates.push(formatDate(d));
+    }
+    d.setDate(d.getDate() + 1);
   }
-  return fridays.slice(0, count);
+  // Add monthly expirations (3rd Friday)
+  for (let m = 0; m < 4; m++) {
+    const month = new Date(today.getFullYear(), today.getMonth() + m, 1);
+    // Find 3rd Friday
+    let fridayCount = 0;
+    for (let day = 1; day <= 31; day++) {
+      const check = new Date(month.getFullYear(), month.getMonth(), day);
+      if (check.getMonth() !== month.getMonth()) break;
+      if (check.getDay() === 5) {
+        fridayCount++;
+        if (fridayCount === 3) {
+          const fd = formatDate(check);
+          if (!dates.includes(fd) && check >= today) dates.push(fd);
+          break;
+        }
+      }
+    }
+  }
+  return dates.slice(0, count);
 }
 
 function formatDate(d: Date): string {
@@ -159,6 +179,8 @@ export default function ChainPage() {
   const [error, setError] = useState(false);
 
   // New state for spx0-style features
+  const [spotPrice, setSpotPrice] = useState(0);
+  const [vix, setVix] = useState(0);
   const [showDelta, setShowDelta] = useState(true);
   const [showBidAsk, setShowBidAsk] = useState(true);
   const [showPCR, setShowPCR] = useState(false);
@@ -166,13 +188,15 @@ export default function ChainPage() {
   const [chainAge, setChainAge] = useState(0);
   const lastFetchRef = useRef<number>(Date.now());
 
-  const fridays = useMemo(() => generateUpcomingFridays(), []);
+  const fridays = useMemo(() => generateUpcomingDates(), []);
 
   useEffect(() => {
     if (!expiry && fridays.length) setExpiry(fridays[0]);
   }, [fridays, expiry]);
 
-  // Chain age ticker
+  const REFRESH_INTERVAL = 10; // seconds
+
+  // Chain age ticker + countdown
   useEffect(() => {
     const iv = setInterval(() => {
       setChainAge(Math.floor((Date.now() - lastFetchRef.current) / 1000));
@@ -182,21 +206,35 @@ export default function ChainPage() {
 
   const fetchData = useCallback(async () => {
     if (!expiry) return;
-    setLoading(true);
     setError(false);
     try {
       const spotTicker = ticker === "SPX" ? "SPY" : ticker;
-      const [chainResp, greekResp, spotResp] = await Promise.all([
+      const [chainResp, greekResp, spotResp, priceResp] = await Promise.all([
         fetch(`${API}/api/uw/option-contracts?ticker=${ticker}&expiration=${expiry}`),
         fetch(`${API}/api/uw/greek-exposure/strike?ticker=${ticker}`),
         fetch(`${API}/api/uw/spot-exposures/strike?ticker=${spotTicker}`),
+        fetch(`${API}/api/uw/spot-price?ticker=${ticker}`),
       ]);
+      // Set real spot price
+      if (priceResp.ok) {
+        const priceJson = await priceResp.json();
+        if (priceJson.spot) setSpotPrice(priceJson.spot);
+        if (priceJson.vix) setVix(priceJson.vix);
+      }
       if (!chainResp.ok) throw new Error("chain");
       const chainJson = await chainResp.json();
       const greekJson = greekResp.ok ? await greekResp.json() : [];
       const spotJson = spotResp.ok ? await spotResp.json() : null;
 
-      const raw: OptionContract[] = (chainJson?.data || chainJson || []).map((c: any) => {
+      // Filter contracts by selected expiration date from option_symbol
+      // Symbol format: SPXW260409C06800000 -> expiry date = 260409 -> 2026-04-09
+      const expiryCompact = expiry.replace(/-/g, "").slice(2); // "2026-04-11" -> "260411"
+      const filteredContracts = (chainJson?.data || chainJson || []).filter((c: any) => {
+        const sym = c.symbol || c.option_symbol || "";
+        return sym.includes(expiryCompact);
+      });
+
+      const raw: OptionContract[] = filteredContracts.map((c: any) => {
         const parsed = parseOptionSymbol(c.symbol || c.option_symbol || "");
         const strike = parsed?.strike ?? (c.strike ? parseFloat(c.strike) : 0);
         const iv = c.implied_volatility ? parseFloat(c.implied_volatility) : (c.iv ? parseFloat(c.iv) : 0);
@@ -269,7 +307,7 @@ export default function ChainPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60_000);
+    const interval = setInterval(fetchData, REFRESH_INTERVAL * 1000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -471,7 +509,7 @@ export default function ChainPage() {
   return (
     <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
       {/* Header */}
-      <PageHeader title="Vol Desk Chain" subtitle="Options chain institutionnelle — GEX, Greeks par strike">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Vol Desk Chain" subtitle="Options chain institutionnelle — GEX, Greeks par strike">
         <select value={ticker} onChange={(e) => setTicker(e.target.value)} className={selCls}>
           {TICKERS.map((t) => (
             <option key={t} value={t}>{t}</option>
@@ -500,10 +538,28 @@ export default function ChainPage() {
         </button>
         <LiveBadge />
         <MarketStatus />
-        {/* Chain Age Indicator */}
-        <span className="text-[9px] text-[#6B6B75] font-mono">
-          chain age {chainAge}s
-        </span>
+        {/* Refresh Countdown */}
+        {(() => {
+          const remaining = Math.max(0, REFRESH_INTERVAL - chainAge);
+          const pct = ((REFRESH_INTERVAL - remaining) / REFRESH_INTERVAL) * 100;
+          const isNear = remaining <= 10;
+          return (
+            <div className="flex items-center gap-2">
+              <div className="relative w-20 h-1.5 bg-[#1A1A1E] rounded-full overflow-hidden">
+                <div
+                  className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: isNear ? "#FF6B00" : "#22C55E",
+                  }}
+                />
+              </div>
+              <span className={`text-[10px] font-mono tabular-nums ${isNear ? "text-[#FF6B00]" : "text-[#6B6B75]"}`}>
+                {remaining}s
+              </span>
+            </div>
+          );
+        })()}
       </PageHeader>
 
       {/* Loading / Error */}
@@ -511,24 +567,24 @@ export default function ChainPage() {
         <Card className="p-12 text-center text-[#6B6B75]">Chargement...</Card>
       ) : error ? (
         <Card className="p-12 text-center text-[#6B6B75]">
-          Lancez le serveur :{" "}
-          <code className="bg-[#08080A] px-2 py-1 rounded text-[#FF6B00]">
-            cd D:\flo-w\server && python main.py
-          </code>
+          <span className="text-[#FF6B00] font-semibold">Reconnexion automatique en cours...</span>
+          <div className="text-xs mt-2 text-[#6B6B75]">Le serveur se reconnecte tout seul — aucune action requise.</div>
         </Card>
       ) : (
         <>
-          {/* KPI Row 1 */}
-          <div className="grid grid-cols-4 gap-3 mb-3">
+          {/* KPI Row 0 — Spot + VIX */}
+          <div className="grid grid-cols-5 gap-3 mb-3">
+            <KpiCard label={`${ticker} SPOT`} value={spotPrice ? spotPrice.toFixed(2) : (stats.atm ? stats.atm.toLocaleString() : "—")} color="#FF6B00" />
+            <KpiCard label="ATM STRIKE" value={stats.atm ? stats.atm.toLocaleString() : "—"} color="#F0F0F0" />
+            <KpiCard label="VIX" value={vix ? fmt(vix, 1) : "—"} color={vix > 25 ? "#EF4444" : vix > 18 ? "#FFA726" : "#22C55E"} />
             <KpiCard label="IV Moy Calls" value={fmt(stats.avgIvC * 100, 1) + "%"} color="#22C55E" />
             <KpiCard label="IV Moy Puts" value={fmt(stats.avgIvP * 100, 1) + "%"} color="#EF4444" />
-            <KpiCard label="Skew P-C" value={fmt(stats.skew * 100, 2)} color="#FFA726" />
-            <KpiCard label="P/C Ratio" value={fmt(stats.pcRatio, 2)} color={stats.pcRatio > 1 ? "#EF4444" : "#22C55E"} />
           </div>
 
-          {/* KPI Row 2 */}
-          <div className="grid grid-cols-4 gap-3 mb-4">
-            <KpiCard label="VRP Estimate" value={fmt(stats.vrp, 1) + "%"} color={stats.vrp > 0 ? "#22C55E" : "#EF4444"} />
+          {/* KPI Row 1 */}
+          <div className="grid grid-cols-5 gap-3 mb-4">
+            <KpiCard label="Skew P-C" value={fmt(stats.skew * 100, 2)} color="#FFA726" />
+            <KpiCard label="P/C Ratio" value={fmt(stats.pcRatio, 2)} color={stats.pcRatio > 1 ? "#EF4444" : "#22C55E"} />
             <KpiCard label="Delta 25 Call" value={stats.delta25Call ? stats.delta25Call.toLocaleString() : "—"} color="#22C55E" />
             <KpiCard label="Delta 25 Put" value={stats.delta25Put ? stats.delta25Put.toLocaleString() : "—"} color="#EF4444" />
             <KpiCard label="Max Pain" value={stats.maxPain ? stats.maxPain.toLocaleString() : "—"} color="#FF6B00" />
@@ -579,22 +635,25 @@ export default function ChainPage() {
           </Card>
 
           {/* ---- FEATURE 2: Quick Expiry Buttons ---- */}
-          <div className="flex gap-2 mb-4">
-            {[0, 1, 2].map((idx) => (
-              <button
-                key={idx}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                  expiry === fridays[idx]
-                    ? "bg-[#FF6B00] text-black border-[#FF6B00]"
-                    : "border-[#1E1E22] text-[#6B6B75] hover:border-[#FF6B00]"
-                }`}
-                onClick={() => setExpiryOffset(idx)}
-              >
-                {idx === 0 ? "0dte" : `next${idx}`}
-                <br />
-                <span className="text-[9px]">{fridays[idx] ?? "—"}</span>
-              </button>
-            ))}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {fridays.slice(0, 6).map((fd, idx) => {
+              const dte = Math.round((new Date(fd + "T00:00:00").getTime() - Date.now()) / 86400000);
+              return (
+                <button
+                  key={fd}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    expiry === fd
+                      ? "bg-[#FF6B00] text-black border-[#FF6B00]"
+                      : "border-[#1E1E22] text-[#6B6B75] hover:border-[#FF6B00]"
+                  }`}
+                  onClick={() => setExpiryOffset(idx)}
+                >
+                  {dte <= 0 ? "0DTE" : `${dte}DTE`}
+                  <br />
+                  <span className="text-[9px]">{fd}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* ---- FEATURE 3: Chain Toggle Buttons ---- */}
@@ -626,6 +685,27 @@ export default function ChainPage() {
           <Card className="overflow-x-auto">
             <table className="w-full text-[11px] font-mono border-collapse">
               <thead>
+                {/* Row 1: CALLS / STRIKE / PUTS labels */}
+                <tr className="border-b border-[#1E1E22]">
+                  {showCalls && (
+                    <th
+                      colSpan={4 + (showDelta ? 1 : 0) + (showBidAsk ? 2 : 0) + (showPCR ? 1 : 0)}
+                      className="py-2 text-center text-xs font-black uppercase tracking-widest text-[#22C55E] bg-[#22C55E08]"
+                    >
+                      CALLS
+                    </th>
+                  )}
+                  <th className="py-2 text-center bg-[#1A1A1E]" />
+                  {showPuts && (
+                    <th
+                      colSpan={4 + (showDelta ? 1 : 0) + (showBidAsk ? 2 : 0) + (showPCR ? 1 : 0)}
+                      className="py-2 text-center text-xs font-black uppercase tracking-widest text-[#EF4444] bg-[#EF444408]"
+                    >
+                      PUTS
+                    </th>
+                  )}
+                </tr>
+                {/* Row 2: Column headers */}
                 <tr className="text-[#6B6B75] uppercase tracking-wider text-[10px]">
                   {showCalls && (
                     <>

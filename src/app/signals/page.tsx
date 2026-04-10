@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { DataFreshness } from "@/components/ui/data-freshness";
 
 const DELTA_SIGNALS = [
@@ -18,16 +19,24 @@ export default function SignalsPage() {
   const [vixData, setVixData] = useState<any>(null);
   const [perfOpen, setPerfOpen] = useState(false);
   const [perfShowAll, setPerfShowAll] = useState(false);
+  const [liveAlerts, setLiveAlerts] = useState<any>(null);
+  const [sigmaData, setSigmaData] = useState<any>(null);
+  const [hundredData, setHundredData] = useState<any>(null);
 
   async function loadSignals() {
-    setLoading(true);
     try {
-      const [dash, perf] = await Promise.all([
+      const [dash, perf, alerts, sigma, hundred] = await Promise.all([
         fetch("http://localhost:3850/api/sierra/dashboard").then(r => r.json()),
         fetch("http://localhost:3850/api/sierra/performance-all").then(r => r.json()),
+        fetch("http://localhost:3850/api/sierra/live-alerts").then(r => r.json()).catch(() => null),
+        fetch("http://localhost:3850/api/sierra/sigma-signals").then(r => r.json()).catch(() => null),
+        fetch("http://localhost:3850/api/sierra/hundred-pct-signals").then(r => r.json()).catch(() => null),
       ]);
       setData(dash);
       setPerfData(perf);
+      setLiveAlerts(alerts);
+      setSigmaData(sigma);
+      setHundredData(hundred);
     } catch (e) { console.error(e); }
     setLoading(false);
   }
@@ -42,13 +51,13 @@ export default function SignalsPage() {
   useEffect(() => {
     loadSignals();
     loadVix();
-    const i = setInterval(loadSignals, 30000);
+    const i = setInterval(loadSignals, 10000);
     return () => clearInterval(i);
   }, []);
 
   return (
     <div className="p-6">
-      <PageHeader title="Signaux Quantitatifs" subtitle="Mean Reversion + Vol Synthetique — 12 actifs">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Signaux Quantitatifs" subtitle="Mean Reversion + Vol Synthetique — 12 actifs">
         <button onClick={loadSignals} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
           Rafraichir
         </button>
@@ -59,7 +68,8 @@ export default function SignalsPage() {
         <div className="text-center py-20 text-[#6B6B75]">Chargement des signaux...</div>
       ) : !data ? (
         <Card className="p-8 text-center text-[#6B6B75]">
-          Serveur non disponible. Lancez: <code className="bg-[#08080A] px-2 py-1 rounded text-[#FF6B00]">cd D:\flo-w\server && python main.py</code>
+          <span className="text-[#FF6B00] font-semibold">Reconnexion automatique en cours...</span>
+          <div className="text-xs mt-2 text-[#6B6B75]">Le serveur se reconnecte tout seul — aucune action requise.</div>
         </Card>
       ) : (
         <>
@@ -84,6 +94,128 @@ export default function SignalsPage() {
               })()}
             />
           </div>
+
+          {/* ── LIVE ALERTS BANNER ── Sigma breakthroughs + 100% touches ── */}
+          {liveAlerts && (liveAlerts.total > 0) && (
+            <Card className="mb-4 overflow-hidden border-[#FF6B0044]">
+              <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3 bg-[#FF6B0008]">
+                <span className="text-sm font-bold text-[#FF6B00] uppercase tracking-wider">Alertes Live</span>
+                <span className="text-[10px] text-[#6B6B75]">
+                  Sigma: <span className="text-[#AB47BC] font-bold">{liveAlerts.sigma_count}</span>
+                  {" · "}
+                  100%: <span className="text-[#EF4444] font-bold">{liveAlerts.hundred_pct_count}</span>
+                </span>
+                <span className="ml-auto text-[9px] text-[#6B6B75] font-mono">refresh 10s</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto divide-y divide-[#1A1A1E]">
+                {(liveAlerts.alerts || []).slice(0, 20).map((a: any, i: number) => (
+                  <div key={i} className="px-5 py-2 flex items-center gap-3 text-xs hover:bg-[#FF6B0006]">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                      a.type === "SIGMA" ? "bg-[#AB47BC22] text-[#AB47BC]" : "bg-[#EF444422] text-[#EF4444]"
+                    }`}>
+                      {a.type === "SIGMA" ? "σ" : "100%"}
+                    </span>
+                    <span className="font-mono font-bold text-[#FF6B00] w-24 truncate">{a.symbol.replace(".CME","").replace(".CBOT","").replace("-NQTV","")}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      a.direction === "UP" ? "bg-[#22C55E22] text-[#22C55E]" : "bg-[#EF444422] text-[#EF4444]"
+                    }`}>
+                      {a.direction}
+                    </span>
+                    <span className="flex-1 text-[#6B6B75] truncate">{a.detail}</span>
+                    <div className="flex gap-0.5">
+                      {[0,1,2,3].map(j => (
+                        <span key={j} className={`w-1.5 h-1.5 rounded-full ${j < (a.strength || 0) ? "bg-[#FF6B00]" : "bg-[#2A2A30]"}`} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* ── SIGMA DETAIL (22-day RV breakthrough) ── */}
+          {sigmaData?.all_assets && sigmaData.all_assets.length > 0 && (
+            <Card className="mb-4 overflow-hidden">
+              <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3">
+                <span className="text-sm font-bold">Sigma Monitor — Depassement RV22</span>
+                <span className="text-[10px] text-[#6B6B75]">Move jour vs volatilite realisee 22j annualisee</span>
+                <span className="ml-auto text-[10px] text-[#AB47BC] font-bold">{sigmaData.signal_count} actifs en breakthrough</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#111114]">
+                    <tr className="text-[#6B6B75] uppercase text-[10px] tracking-wider">
+                      <th className="text-left p-3">Actif</th>
+                      <th className="p-3">Prix</th>
+                      <th className="p-3">Move %</th>
+                      <th className="p-3">Range %</th>
+                      <th className="p-3">RV22 (ann)</th>
+                      <th className="p-3">σ Multiple</th>
+                      <th className="p-3">Intensite</th>
+                      <th className="p-3">Signal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#1A1A1E]">
+                    {sigmaData.all_assets.map((a: any, i: number) => {
+                      const sym = a.symbol.replace(".CME","").replace(".CBOT","").replace("-NQTV","").replace("-RangeWeek","w");
+                      const intColor = a.strength >= 4 ? "#EF4444" : a.strength >= 3 ? "#FF6B00" : a.strength >= 2 ? "#FFA726" : a.strength >= 1 ? "#42A5F5" : "#6B6B75";
+                      return (
+                        <tr key={i} className={`hover:bg-[#FF6B0006] ${a.is_signal ? "bg-[#AB47BC08]" : ""}`}>
+                          <td className="p-3 font-mono font-bold text-[#FF6B00]">{sym}</td>
+                          <td className="p-3 text-center font-mono">{a.price}</td>
+                          <td className="p-3 text-center font-mono font-bold" style={{ color: a.log_ret_pct > 0 ? "#22C55E" : "#EF4444" }}>
+                            {a.log_ret_pct > 0 ? "+" : ""}{a.log_ret_pct}%
+                          </td>
+                          <td className="p-3 text-center font-mono text-[#6B6B75]">{a.range_ret_pct}%</td>
+                          <td className="p-3 text-center font-mono text-[#6B6B75]">{a.rv22_annual_pct}%</td>
+                          <td className="p-3 text-center font-mono font-bold" style={{ color: intColor }}>{a.sigma_mult}σ</td>
+                          <td className="p-3 text-center">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: `${intColor}22`, color: intColor }}>
+                              {a.intensity}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            {a.is_signal ? (
+                              <span className="text-[#AB47BC] font-bold">σ VERT</span>
+                            ) : (
+                              <span className="text-[#6B6B75]">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {/* ── 100% TOUCHES ── */}
+          {hundredData?.signals && hundredData.signals.length > 0 && (
+            <Card className="mb-4 overflow-hidden">
+              <div className="px-5 py-3 border-b border-[#1E1E22] flex items-center gap-3">
+                <span className="text-sm font-bold">Touches 100% hebdomadaire — Mean Reversion Fort</span>
+                <span className="ml-auto text-[10px] text-[#EF4444] font-bold">{hundredData.count} touches</span>
+              </div>
+              <div className="max-h-72 overflow-y-auto divide-y divide-[#1A1A1E]">
+                {hundredData.signals.map((s: any, i: number) => {
+                  const isUpper = (s.level || "").includes("+");
+                  return (
+                    <div key={i} className="px-5 py-2 flex items-center gap-3 text-xs hover:bg-[#FF6B0006]">
+                      <span className="font-mono text-[10px] text-[#FF6B00] w-24">{s.date} {(s.time || "").split(".")[0]}</span>
+                      <span className="font-mono font-bold text-[#FF6B00] w-16">{s.asset}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${isUpper ? "bg-[#EF444422] text-[#EF4444]" : "bg-[#22C55E22] text-[#22C55E]"}`}>
+                        {s.level}
+                      </span>
+                      <span className="font-mono text-[#6B6B75]">@ {s.level_price}</span>
+                      <span className="flex-1 text-[10px] text-[#6B6B75]">{s.bias}</span>
+                      <span className="text-[10px] text-[#AB47BC]">{s.cross_type}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
 
           {/* Asset classes */}
           <div className="grid grid-cols-2 gap-4 mb-6">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 
 const API = "http://localhost:3850";
 
@@ -97,9 +98,21 @@ function matchesCategory(headline: string, category: string): boolean {
   return keywords.some(kw => upper.includes(kw));
 }
 
+interface ArchiveMeta {
+  total: number;
+  filtered: number;
+  updated_at: string | null;
+  refresh_count: number;
+  retention_days: number;
+  refresh_interval_s: number;
+  last_new_count: number;
+  histogram: { date: string; count: number }[];
+}
+
 export default function NewsPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
+  const [archiveMeta, setArchiveMeta] = useState<ArchiveMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tz, setTz] = useState("ET");
@@ -107,20 +120,39 @@ export default function NewsPage() {
   const [activeCategory, setActiveCategory] = useState("ALL");
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError("");
     try {
-      const [eRes, nRes] = await Promise.all([
+      const [eRes, aRes] = await Promise.all([
         fetch(`${API}/api/uw/economic-calendar`).then(r => r.json()),
-        fetch(`${API}/api/uw/news`).then(r => r.json()),
+        fetch(`${API}/api/news/archive?limit=500`).then(r => r.json()),
       ]);
       setEvents(Array.isArray(eRes) ? eRes : eRes?.data ?? []);
-      setNews(Array.isArray(nRes) ? nRes : nRes?.data ?? []);
+      const items = Array.isArray(aRes?.items) ? aRes.items : [];
+      setNews(items);
+      setArchiveMeta({
+        total: aRes?.total ?? 0,
+        filtered: aRes?.filtered ?? 0,
+        updated_at: aRes?.updated_at ?? null,
+        refresh_count: aRes?.refresh_count ?? 0,
+        retention_days: aRes?.retention_days ?? 14,
+        refresh_interval_s: aRes?.refresh_interval_s ?? 300,
+        last_new_count: aRes?.last_new_count ?? 0,
+        histogram: aRes?.histogram ?? [],
+      });
     } catch (e: any) { setError(e.message || "Serveur indisponible"); }
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); const i = setInterval(load, 60_000); return () => clearInterval(i); }, [load]);
+  const triggerRefresh = useCallback(async () => {
+    try {
+      await fetch(`${API}/api/news/refresh`, { method: "POST" });
+      await load();
+    } catch {
+      /* ignore */
+    }
+  }, [load]);
+
+  useEffect(() => { load(); const i = setInterval(load, 10_000); return () => clearInterval(i); }, [load]);
 
   const todayEvents = events.filter((ev: any) => isToday(ev.date || ev.datetime || "", tz));
 
@@ -132,23 +164,11 @@ export default function NewsPage() {
     return true;
   });
 
-  if (loading) return (
-    <div className="p-6">
-      <PageHeader title="Actualites & Calendrier" subtitle="Flux macro + calendrier economique" />
-      <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-6">
-      <PageHeader title="Actualites & Calendrier" subtitle="Flux macro + calendrier economique" />
-      <Card className="p-8 text-center text-red-400">{error}</Card>
-    </div>
-  );
+  const hasData = events.length > 0 || news.length > 0;
 
   return (
     <div className="p-6 space-y-5">
-      <PageHeader title="Actualites & Calendrier" subtitle="Flux macro + calendrier economique en temps reel">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Actualites & Calendrier" subtitle="Flux macro + calendrier economique en temps reel">
         {/* Timezone toggle */}
         <div className="flex bg-[#111114] border border-[#1E1E22] rounded-lg overflow-hidden">
           {["ET", "CET"].map(t => (
@@ -158,11 +178,57 @@ export default function NewsPage() {
             </button>
           ))}
         </div>
-        <button onClick={load} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
-          Rafraichir
+        <button onClick={triggerRefresh} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">
+          Forcer pull
         </button>
         <LiveBadge />
       </PageHeader>
+
+      {loading && !hasData ? (
+        <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
+      ) : error && !hasData ? (
+        <Card className="p-8 text-center text-red-400">{error}</Card>
+      ) : (
+        <>
+      {/* ── Archive stats banner ── */}
+      {archiveMeta && (
+        <Card className="p-3">
+          <div className="flex items-center gap-4 flex-wrap text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+              <span className="text-[#6B6B75] uppercase text-[9px]">Archive glissante</span>
+              <span className="text-[#F0F0F0] font-mono font-bold">{archiveMeta.total}</span>
+              <span className="text-[#6B6B75]">news ({archiveMeta.retention_days}j)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[#6B6B75] uppercase text-[9px]">Cycles</span>
+              <span className="text-[#42A5F5] font-mono font-bold">{archiveMeta.refresh_count}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[#6B6B75] uppercase text-[9px]">Intervalle</span>
+              <span className="text-[#F0F0F0] font-mono">{archiveMeta.refresh_interval_s}s</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[#6B6B75] uppercase text-[9px]">Dernier pull</span>
+              <span className="text-[#FFA726] font-mono">+{archiveMeta.last_new_count}</span>
+            </div>
+            <div className="ml-auto flex items-center gap-0.5">
+              {archiveMeta.histogram.slice(-14).map((h) => {
+                const max = Math.max(1, ...archiveMeta.histogram.map((x) => x.count));
+                const heightPct = (h.count / max) * 100;
+                return (
+                  <div
+                    key={h.date}
+                    title={`${h.date}: ${h.count} news`}
+                    className="w-2 bg-[#FF6B00]/80 rounded-sm"
+                    style={{ height: `${Math.max(4, heightPct * 0.24)}px` }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* ── Economic Calendar Timeline ── */}
       <Card className="p-4">
@@ -280,6 +346,8 @@ export default function NewsPage() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

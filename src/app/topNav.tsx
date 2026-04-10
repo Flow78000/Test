@@ -11,6 +11,7 @@ const SECTIONS = [
       { href: "/flow", label: "Flow" },
       { href: "/greeks", label: "GEX" },
       { href: "/dark-pool", label: "Dark Pool" },
+      { href: "/dark-pool-alerts", label: "DP Alerts" },
       { href: "/straddle", label: "Straddle" },
     ],
   },
@@ -34,17 +35,23 @@ const SECTIONS = [
     pages: [
       { href: "/heatmap", label: "Secteurs" },
       { href: "/news", label: "News" },
+      { href: "/sentiment", label: "Sentiment" },
       { href: "/earnings", label: "Earnings" },
+      { href: "/earnings-history", label: "Earnings Hist." },
       { href: "/calendrier", label: "Calendrier" },
       { href: "/central-banks", label: "Banques C." },
       { href: "/fx-matrix", label: "FX" },
       { href: "/range-dashboard", label: "Ranges" },
+      { href: "/floq", label: "FLO.Q" },
+      { href: "/systemic-risk", label: "Stress" },
     ],
   },
   { id: "OUTILS", label: "OUTILS", color: "#6B6B75", icon: "⚙",
     pages: [
       { href: "/spread-calc", label: "Calculateur" },
       { href: "/pnl-sim", label: "Option Lab" },
+      { href: "/pricing-lab", label: "Pricing Lab" },
+      { href: "/messages", label: "Messages" },
     ],
   },
   { id: "ACADEMIE", label: "ACADEMIE", color: "#F0F0F0", icon: "",
@@ -57,11 +64,11 @@ const SECTIONS = [
 
 function getActiveSection(pathname: string): string {
   if (pathname === "/") return "LIVE";
-  if (["/chain", "/flow", "/greeks", "/dark-pool", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
+  if (["/chain", "/flow", "/greeks", "/dark-pool", "/dark-pool-alerts", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
   if (["/regime", "/signals"].some((p) => pathname.startsWith(p))) return "REGIME";
   if (["/vol-", "/term-", "/surface"].some((p) => pathname.startsWith(p))) return "VOL";
-  if (["/heatmap", "/news", "/earnings", "/calendrier", "/central", "/fx-", "/range"].some((p) => pathname.startsWith(p))) return "MACRO";
-  if (["/spread", "/pnl"].some((p) => pathname.startsWith(p))) return "OUTILS";
+  if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk"].some((p) => pathname.startsWith(p))) return "MACRO";
+  if (["/spread", "/pnl", "/pricing-lab", "/messages"].some((p) => pathname.startsWith(p))) return "OUTILS";
   if (pathname.startsWith("/academie")) return "ACADEMIE";
   return "LIVE";
 }

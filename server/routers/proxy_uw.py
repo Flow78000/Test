@@ -31,6 +31,12 @@ def uw_fetch(endpoint: str):
 def darkpool(ticker: str):
     return uw_fetch(f"/darkpool/{ticker}")
 
+@router.get("/darkpool-alerts")
+def darkpool_alerts():
+    """Scan the dark pool watchlist in parallel and return real-time alerts."""
+    from services.darkpool_scanner import scan_darkpool
+    return scan_darkpool()
+
 @router.get("/option-contracts")
 def option_contracts(ticker: str = "SPX", expiration: str = ""):
     return uw_fetch(f"/stock/{ticker}/option-contracts?expiration={expiration}")
@@ -70,6 +76,36 @@ def sector_etfs():
 @router.get("/news")
 def news():
     return uw_fetch("/news/headlines")
+
+@router.get("/sentiment")
+def sentiment():
+    """Calcule le sentiment agrege par ticker a partir des headlines UW
+    et detecte les anomalies semantiques (spike volume, shift sentiment,
+    vocab de crise)."""
+    from services.sentiment_engine import compute_sentiment
+    raw = uw_fetch("/news/headlines")
+    headlines = []
+    if isinstance(raw, dict):
+        data = raw.get("data") or raw.get("headlines") or []
+        if isinstance(data, list):
+            headlines = data
+        elif isinstance(raw, list):
+            headlines = raw
+    elif isinstance(raw, list):
+        headlines = raw
+    return compute_sentiment(headlines)
+
+@router.get("/earnings/history")
+def earnings_history(ticker: str = "AAPL"):
+    """Historical earnings with pre/post moves, straddle returns, EPS surprise."""
+    from services.earnings_history import build_earnings_history
+    raw = uw_fetch(f"/earnings/{ticker}")
+    rows = []
+    if isinstance(raw, dict):
+        rows = raw.get("data") or raw.get("earnings") or []
+    elif isinstance(raw, list):
+        rows = raw
+    return build_earnings_history(ticker, rows)
 
 @router.get("/earnings/premarket")
 def earnings_pre(date: str = ""):
@@ -160,9 +196,174 @@ def sector_rotation(days: int = 60):
         "defensive_tickers": list(defensive),
     }
 
+@router.get("/spot-price")
+def spot_price(ticker: str = "SPX"):
+    """Get current spot price from iv-rank (latest close) + VIX."""
+    iv_data = uw_fetch(f"/stock/{ticker}/iv-rank")
+    items = iv_data.get("data", []) if isinstance(iv_data, dict) else []
+    if not items:
+        return {"error": "No iv-rank data", "ticker": ticker}
+    latest = items[-1]
+    spot = float(latest.get("close", 0))
+    iv = float(latest.get("volatility", 0)) * 100
+    iv_rank = float(latest.get("iv_rank_1y", 0))
+    # Also get VIX
+    vix_data = uw_fetch("/stock/VIX/iv-rank")
+    vix_items = vix_data.get("data", []) if isinstance(vix_data, dict) else []
+    vix = float(vix_items[-1].get("close", 0)) if vix_items else 0
+    return {
+        "spot": spot,
+        "iv": iv,
+        "iv_rank": iv_rank,
+        "vix": vix,
+        "date": latest.get("date"),
+        "updated_at": latest.get("updated_at"),
+    }
+
+@router.get("/straddle")
+def straddle_data(ticker: str = "SPX"):
+    """Build ATM straddle table from real UW option contracts.
+    Returns spot, VIX, and straddle rows for multiple expirations."""
+    import concurrent.futures
+    from datetime import datetime, timedelta
+
+    # 1. Get spot price
+    spot_info = spot_price(ticker)
+    spot = spot_info.get("spot", 0)
+    vix = spot_info.get("vix", 0)
+    if not spot:
+        return {"error": "Cannot get spot price", "detail": spot_info}
+
+    # ATM strike (round to nearest 5)
+    atm = round(spot / 5) * 5
+
+    # 2. Fetch ALL contracts (UW returns top 500 most active across all expiries)
+    all_data = uw_fetch(f"/stock/{ticker}/option-contracts")
+    all_contracts = all_data.get("data", []) if isinstance(all_data, dict) else []
+
+    if not all_contracts:
+        return {"error": "No option contracts from UW", "spot": spot, "vix": vix}
+
+    def _parse_sym(sym):
+        """Parse SPXW260409C06800000 -> (date_str '260409', type 'C', strike 6800.0)"""
+        for i in range(4, len(sym)):
+            if sym[i] in ("C", "P") and i + 1 < len(sym) and sym[i + 1:].isdigit():
+                date_part = sym[4:i] if sym.startswith("SPXW") or sym.startswith(ticker + "W") else sym[len(ticker):i]
+                return date_part, sym[i], int(sym[i + 1:]) / 1000
+        return None, None, 0
+
+    # 3. Group contracts by expiration date
+    by_exp = {}  # date_str -> list of contracts
+    for c in all_contracts:
+        sym = c.get("option_symbol", "")
+        if not sym:
+            continue
+        date_part, opt_type, strike = _parse_sym(sym)
+        if not date_part or not opt_type or strike <= 0:
+            continue
+        if date_part not in by_exp:
+            by_exp[date_part] = []
+        bid = float(c.get("nbbo_bid", 0) or 0)
+        ask = float(c.get("nbbo_ask", 0) or 0)
+        iv_val = float(c.get("implied_volatility", 0) or 0)
+        by_exp[date_part].append({
+            "type": opt_type, "strike": strike,
+            "bid": bid, "ask": ask, "iv": iv_val,
+        })
+
+    # 4. Convert date strings to actual dates and compute DTE
+    today = datetime.now().date()
+    exp_with_dte = []
+    for date_str, contracts in by_exp.items():
+        try:
+            y = 2000 + int(date_str[:2])
+            m = int(date_str[2:4])
+            d = int(date_str[4:6])
+            exp_date = datetime(y, m, d).date()
+            dte = (exp_date - today).days
+            if dte < 0:
+                continue
+            exp_with_dte.append((dte, exp_date.isoformat(), contracts))
+        except:
+            continue
+
+    exp_with_dte.sort(key=lambda x: x[0])
+
+    # 5. For each target DTE, find the closest available expiration
+    target_dtes = [0, 1, 2, 3, 7, 14, 30, 60, 90]
+    used_exps = set()
+    rows = []
+
+    for target in target_dtes:
+        best_match = None
+        best_diff = float("inf")
+        for dte, exp_iso, contracts in exp_with_dte:
+            diff = abs(dte - target)
+            if diff < best_diff and exp_iso not in used_exps:
+                best_diff = diff
+                best_match = (dte, exp_iso, contracts)
+        if not best_match or best_diff > max(target * 0.5 + 2, 5):  # Allow tolerance
+            continue
+        used_exps.add(best_match[1])
+        dte, exp_iso, contracts = best_match
+
+        # Find ATM call + put
+        best_call = None
+        best_put = None
+        min_call_dist = float("inf")
+        min_put_dist = float("inf")
+
+        for entry in contracts:
+            dist = abs(entry["strike"] - atm)
+            if entry["type"] == "C" and dist < min_call_dist:
+                min_call_dist = dist
+                best_call = entry
+            elif entry["type"] == "P" and dist < min_put_dist:
+                min_put_dist = dist
+                best_put = entry
+
+        if best_call and best_put:
+                call_mid = (best_call["bid"] + best_call["ask"]) / 2
+                put_mid = (best_put["bid"] + best_put["ask"]) / 2
+                straddle = call_mid + put_mid
+                avg_iv = (best_call["iv"] + best_put["iv"]) / 2 * 100
+                pc_skew = round(call_mid / put_mid, 3) if put_mid > 0 else 0
+                rows.append({
+                    "dte": dte,
+                    "expiry": exp_iso,
+                    "strike": int(best_call["strike"]),
+                    "callBid": best_call["bid"],
+                    "callAsk": best_call["ask"],
+                    "putBid": best_put["bid"],
+                    "putAsk": best_put["ask"],
+                    "straddle": round(straddle, 2),
+                    "implMove": round(straddle, 2),
+                    "implMovePct": round(straddle / spot * 100, 2),
+                    "pcSkew": pc_skew,
+                    "iv": round(avg_iv, 1),
+                })
+
+    rows.sort(key=lambda r: r["dte"])
+    return {
+        "spot": spot,
+        "vix": vix,
+        "atm": atm,
+        "iv": spot_info.get("iv", 0),
+        "iv_rank": spot_info.get("iv_rank", 0),
+        "rows": rows,
+        "is_live": True,
+        "updated_at": spot_info.get("updated_at"),
+    }
+
 @router.get("/spot-exposures/strike")
 def spot_exposures(ticker: str = "SPY"):
     return uw_fetch(f"/stock/{ticker}/spot-exposures/strike")
+
+@router.get("/vol-surface")
+def vol_surface(ticker: str = "SPY"):
+    """Real implied volatility surface built from UW option contracts."""
+    from services.vol_surface import build_vol_surface
+    return build_vol_surface(ticker)
 
 @router.get("/stock-info")
 def stock_info(ticker: str = "SPY"):

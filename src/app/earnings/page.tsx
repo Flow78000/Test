@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge, KpiCard } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { fmtNum } from "@/lib/format";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
@@ -185,7 +186,6 @@ export default function EarningsPage() {
   }, [weekOffset]);
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError("");
     try {
       const mapEarning = (e: any): Earning => {
@@ -302,23 +302,11 @@ export default function EarningsPage() {
     };
   });
 
-  if (loading) return (
-    <div className="p-6">
-      <PageHeader title="Resultats Financiers" subtitle="Calendrier des earnings" />
-      <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-6">
-      <PageHeader title="Resultats Financiers" subtitle="Calendrier des earnings" />
-      <Card className="p-8 text-center text-red-400">{error}</Card>
-    </div>
-  );
+  const hasData = pre.length > 0 || post.length > 0;
 
   return (
     <div className="p-6">
-      <PageHeader title="Resultats Financiers" subtitle="Calendrier earnings, expected moves et impact dividendes">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Resultats Financiers" subtitle="Calendrier earnings, expected moves et impact dividendes">
         <label className="flex items-center gap-2 text-xs text-[#6B6B75] cursor-pointer">
           <input type="checkbox" checked={sp500Only} onChange={e => setSp500Only(e.target.checked)} className="accent-[#FF6B00]" />
           S&P 500
@@ -331,6 +319,12 @@ export default function EarningsPage() {
         <LiveBadge />
       </PageHeader>
 
+      {loading && !hasData ? (
+        <div className="text-center py-20 text-[#6B6B75]">Chargement...</div>
+      ) : error && !hasData ? (
+        <Card className="p-8 text-center text-red-400">{error}</Card>
+      ) : (
+        <>
       {/* Weekly KPIs */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4">
         <KpiCard label="Total" value={totalCount} color="#FF6B00" />
@@ -430,6 +424,8 @@ export default function EarningsPage() {
           <span><span className="inline-block w-2 h-2 rounded-full bg-[#AB47BC] mr-1" />OPT IMPACT = le dividende affecte le pricing des options (puts montent, calls baissent pre-ex-date)</span>
         </div>
       </Card>
+        </>
+      )}
     </div>
   );
 }

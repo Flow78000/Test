@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { DataFreshness } from "@/components/ui/data-freshness";
 import { fmtNum, fmtPct } from "@/lib/format";
 import {
@@ -37,9 +38,43 @@ function VolDeskLiveTab() {
   const [loading, setLoading] = useState(true);
   const [collecting, setCollecting] = useState(false);
   const [collectMsg, setCollectMsg] = useState("");
+  const [twsStatus, setTwsStatus] = useState<{connected: boolean; qualified_count: number} | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
+
+  const loadTwsStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/market/tws/status`).then(r => r.json());
+      setTwsStatus(res);
+    } catch { setTwsStatus({ connected: false, qualified_count: 0 }); }
+  }, []);
+
+  const reconnectTws = async () => {
+    setReconnecting(true);
+    setCollectMsg("Reconnexion TWS en cours...");
+    try {
+      const res = await fetch(`${API}/api/market/tws/reconnect`, { method: "POST" }).then(r => r.json());
+      if (res.connected) {
+        setCollectMsg(`TWS reconnecte — ${res.qualified_count} contrats qualifies`);
+        await loadTwsStatus();
+        // Auto-collecte apres reconnexion reussie
+        try {
+          const c = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+          if (!c.error) {
+            const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+            if (fresh && !fresh.error) setData(fresh);
+          }
+        } catch { }
+      } else {
+        setCollectMsg("Reconnexion echouee — verifiez que TWS tourne sur 127.0.0.1:7496");
+      }
+    } catch {
+      setCollectMsg("Erreur lors de la reconnexion");
+    }
+    setReconnecting(false);
+    setTimeout(() => setCollectMsg(""), 6000);
+  };
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
       if (res && !res.error) {
@@ -66,7 +101,8 @@ function VolDeskLiveTab() {
 
   useEffect(() => {
     load();
-    // Auto-refresh every 30 min
+    loadTwsStatus();
+    // Auto-refresh every 10s — collect + status
     const t = setInterval(async () => {
       try {
         const res = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
@@ -75,9 +111,10 @@ function VolDeskLiveTab() {
           if (fresh && !fresh.error) setData(fresh);
         }
       } catch { }
-    }, 30 * 60 * 1000);
+      loadTwsStatus();
+    }, 10000);
     return () => clearInterval(t);
-  }, [load]);
+  }, [load, loadTwsStatus]);
 
   const collect = async () => {
     setCollecting(true);
@@ -97,7 +134,7 @@ function VolDeskLiveTab() {
     setTimeout(() => setCollectMsg(""), 5000);
   };
 
-  if (loading) return <div className="text-center py-20 text-[#6B6B75]">Chargement Vol Desk...</div>;
+  if (loading && !data) return <div className="text-center py-20 text-[#6B6B75]">Chargement Vol Desk...</div>;
 
   // Group tickers by type
   const tickers = data?.tickers || {};
@@ -115,6 +152,26 @@ function VolDeskLiveTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
+        {/* TWS Status + Reconnect button */}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+             style={{
+               background: twsStatus?.connected ? "#22C55E10" : "#EF444410",
+               borderColor: twsStatus?.connected ? "#22C55E40" : "#EF444440",
+             }}>
+          <span className="w-2 h-2 rounded-full animate-pulse"
+                style={{ background: twsStatus?.connected ? "#22C55E" : "#EF4444" }} />
+          <span className="text-[11px] font-bold uppercase tracking-wider"
+                style={{ color: twsStatus?.connected ? "#22C55E" : "#EF4444" }}>
+            {twsStatus?.connected ? `TWS LIVE (${twsStatus.qualified_count} ctr)` : "TWS OFFLINE"}
+          </span>
+        </div>
+        <button
+          onClick={reconnectTws}
+          disabled={reconnecting}
+          className="px-4 py-2 bg-[#42A5F5] text-black rounded-lg text-xs font-bold hover:bg-[#64B5F6] disabled:opacity-50 transition-colors"
+        >
+          {reconnecting ? "Reconnexion..." : "Reconnecter TWS"}
+        </button>
         <button
           onClick={collect}
           disabled={collecting}
@@ -475,7 +532,7 @@ export default function VolMonitorPage() {
 
   return (
     <div className="p-6">
-      <PageHeader title="Vol Monitor" subtitle="Suivi IV/HV/Put-Call — Secteurs, Cross-Asset, Stress, CC ETFs">
+      <PageHeader timer={<RefreshTimer intervalSeconds={10} />} title="Vol Monitor" subtitle="Suivi IV/HV/Put-Call — Secteurs, Cross-Asset, Stress, CC ETFs">
         <LiveBadge />
       </PageHeader>
 

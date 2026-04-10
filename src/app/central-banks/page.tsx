@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader, Card, Badge, KpiCard } from "@/components/ui/card";
+import { RefreshTimer } from "@/components/ui/refresh-timer";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts";
@@ -260,6 +261,7 @@ export default function CentralBanksPage() {
   return (
     <div className="p-6 min-h-screen bg-[#08080A] text-[#E0E0E5]">
       <PageHeader
+        timer={<RefreshTimer intervalSeconds={10} />}
         title="Banques Centrales — Politique Monetaire"
         subtitle="Fed, BCE, BOJ, BOC, SNB, BOE, RBA — Taux, dot plot et calendrier"
       />
