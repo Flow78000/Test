@@ -103,12 +103,102 @@ app.include_router(news.router, prefix="/api/news", tags=["News Archive"])
 @app.get("/api/health")
 def health():
     from services.tws import ib_connected, qualified
+    import os
+    import time
+    import urllib.request
+
+    # Unusual Whales — reachability via curl subprocess (same code path as proxy_uw)
+    uw_ok = False
+    uw_detail = "not checked"
+    try:
+        import subprocess
+        token = os.environ.get("UW_API_TOKEN", "da6adf76-f312-4572-acff-e7f99d63c650")
+        proc = subprocess.run(
+            [
+                "curl", "-s", "-o", os.devnull, "-w", "%{http_code}",
+                "https://api.unusualwhales.com/api/stock/SPY/iv-rank",
+                "-H", f"Authorization: Bearer {token}",
+                "-H", "Accept: application/json",
+                "--max-time", "3",
+            ],
+            capture_output=True, text=True, timeout=5,
+        )
+        code = (proc.stdout or "").strip()
+        # 200 = ok, 429 = rate limited but reachable, anything else = degraded
+        uw_ok = code in ("200", "429")
+        uw_detail = f"HTTP {code}" if code else "no response"
+    except Exception as e:
+        uw_detail = type(e).__name__
+
+    # Sierra Chart — look for fresh BarStudyData files in the data dir
+    sierra_ok = False
+    sierra_detail = "data dir not found"
+    sierra_latest_age = None
+    try:
+        sdir = r"C:\SierraChart\Data"
+        if os.path.isdir(sdir):
+            now = time.time()
+            latest_mtime = 0
+            for fname in os.listdir(sdir):
+                if "BarStudyData" in fname and fname.endswith(".csv"):
+                    full = os.path.join(sdir, fname)
+                    try:
+                        m = os.path.getmtime(full)
+                        if m > latest_mtime:
+                            latest_mtime = m
+                    except OSError:
+                        pass
+            if latest_mtime > 0:
+                sierra_latest_age = int(now - latest_mtime)
+                sierra_ok = sierra_latest_age < 24 * 3600  # fresh if under 24h
+                sierra_detail = f"latest file {sierra_latest_age}s old"
+            else:
+                sierra_detail = "no BarStudyData files"
+    except Exception as e:
+        sierra_detail = type(e).__name__
+
+    # Range scheduler status
+    range_ok = False
+    range_detail = "not started"
+    try:
+        from services.range_scheduler import get_status as get_scheduler_status
+        st = get_scheduler_status()
+        range_ok = bool(st.get("running")) and st.get("last_error") is None
+        range_detail = f"refresh_count={st.get('refresh_count', 0)}"
+    except Exception as e:
+        range_detail = type(e).__name__
+
+    # News archive
+    news_ok = False
+    news_detail = "not started"
+    try:
+        from services.news_archive import get_archive
+        arc = get_archive(limit=1)
+        news_ok = bool(arc.get("refresh_count", 0) > 0)
+        news_detail = f"items={arc.get('total', 0)}"
+    except Exception as e:
+        news_detail = type(e).__name__
+
+    sources = {
+        "uw": {"ok": uw_ok, "detail": uw_detail, "label": "Unusual Whales API"},
+        "tws": {"ok": ib_connected, "detail": f"{len(qualified)} instruments" if ib_connected else "disconnected", "label": "TWS / Interactive Brokers"},
+        "sierra": {"ok": sierra_ok, "detail": sierra_detail, "label": "Sierra Chart"},
+        "range_scheduler": {"ok": range_ok, "detail": range_detail, "label": "Range Scheduler"},
+        "news_archive": {"ok": news_ok, "detail": news_detail, "label": "News Archive"},
+    }
+    critical_down = [k for k, v in sources.items() if not v["ok"] and k in ("uw", "sierra")]
+    optional_down = [k for k, v in sources.items() if not v["ok"] and k not in ("uw", "sierra")]
+
     return {
-        "status": "ok",
+        "status": "ok" if not critical_down else "degraded",
         "server": "FLO.W v2.0",
         "tws_connected": ib_connected,
         "instruments": len(qualified),
         "mode": "MARKET DATA ONLY",
+        "sources": sources,
+        "critical_down": critical_down,
+        "optional_down": optional_down,
+        "sierra_latest_age_s": sierra_latest_age,
     }
 
 if __name__ == "__main__":

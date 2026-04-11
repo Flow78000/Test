@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, KpiCard, Badge, LiveBadge } from "@/components/ui/card";
 import { SkeletonGrid, ErrorCard } from "@/components/ui/skeleton";
 import { DataFreshness } from "@/components/ui/data-freshness";
+import { ConnectivityBanner } from "@/components/ui/connectivity-banner";
 import { fmtPremium, fmtK, timeAgo, regimeFromIV, fmtPrice, fmtPct } from "@/lib/format";
 
 const API = "http://localhost:3850";
@@ -84,14 +85,28 @@ export default function Dashboard() {
     return () => clearInterval(i);
   }, [refresh]);
 
-  if (loading && !data) return <div className="p-6"><SkeletonGrid cols={6} /><SkeletonGrid cols={3} /></div>;
-  if (!data) return <div className="p-6"><ErrorCard onRetry={refresh} /></div>;
+  if (loading && !data) return (
+    <div className="p-4 space-y-4">
+      <ConnectivityBanner />
+      <SkeletonGrid cols={6} />
+      <SkeletonGrid cols={3} />
+    </div>
+  );
+  if (!data) return (
+    <div className="p-4 space-y-4">
+      <ConnectivityBanner />
+      <ErrorCard onRetry={refresh} />
+    </div>
+  );
 
   const { regime } = data;
   const bullPct = data.tide?.bull_pct ?? 55;
 
   return (
     <div className="p-4 space-y-4">
+      {/* Connectivity banner — shows when tools are disconnected */}
+      <ConnectivityBanner />
+
       {/* Row 1 — KPI Ticker Bar */}
       <div className="h-8 flex items-center gap-4 px-3 bg-[#111114] border border-[#1E1E22] rounded-lg overflow-x-auto">
         <Chip label="VIX" value={data.iv.toFixed(1)} color={data.iv > 25 ? "#EF4444" : "#22C55E"} />
