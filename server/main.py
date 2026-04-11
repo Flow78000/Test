@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routers import sierra, regime, market, proxy_uw, menthorq, messages, pricing, news
+from routers import sierra, regime, market, proxy_uw, menthorq, messages, pricing, news, spread_gap
 from services.tws import connect_tws, disconnect_tws, qualify_all, ensure_connected
 from services.news_archive import start_news_archiver, stop_news_archiver
 from services.range_scheduler import start_range_scheduler, stop_range_scheduler
@@ -99,6 +99,7 @@ app.include_router(menthorq.router, prefix="/api/floq", tags=["FLO.Q"])
 app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
 app.include_router(pricing.router, prefix="/api/pricing", tags=["Pricing Lab"])
 app.include_router(news.router, prefix="/api/news", tags=["News Archive"])
+app.include_router(spread_gap.router, prefix="/api/spread-gap", tags=["Spread Gap Tracker"])
 
 @app.get("/api/health")
 def health():
@@ -107,15 +108,18 @@ def health():
     import time
     import urllib.request
 
-    # Unusual Whales — reachability via curl subprocess (same code path as proxy_uw)
+    # Unusual Whales — reachability via curl subprocess (same code path as proxy_uw).
+    # UW returns HTTP 200 with an error envelope when the daily limit is hit,
+    # so we must inspect the body, not just the status code.
     uw_ok = False
     uw_detail = "not checked"
     try:
         import subprocess
+        import json as _json
         token = os.environ.get("UW_API_TOKEN", "da6adf76-f312-4572-acff-e7f99d63c650")
         proc = subprocess.run(
             [
-                "curl", "-s", "-o", os.devnull, "-w", "%{http_code}",
+                "curl", "-s", "-w", "\n%{http_code}",
                 "https://api.unusualwhales.com/api/stock/SPY/iv-rank",
                 "-H", f"Authorization: Bearer {token}",
                 "-H", "Accept: application/json",
@@ -123,10 +127,33 @@ def health():
             ],
             capture_output=True, text=True, timeout=5,
         )
-        code = (proc.stdout or "").strip()
-        # 200 = ok, 429 = rate limited but reachable, anything else = degraded
-        uw_ok = code in ("200", "429")
-        uw_detail = f"HTTP {code}" if code else "no response"
+        out = proc.stdout or ""
+        nl = out.rfind("\n")
+        body = out[:nl] if nl >= 0 else ""
+        code = (out[nl + 1:] if nl >= 0 else out).strip()
+
+        if code == "200":
+            # inspect body: error envelope means daily limit / rate limit
+            try:
+                parsed = _json.loads(body)
+            except Exception:
+                parsed = None
+            if isinstance(parsed, dict) and "code" in parsed and "data" not in parsed:
+                err_code = str(parsed.get("code", ""))
+                if "limit" in err_code.lower():
+                    uw_ok = False
+                    uw_detail = f"daily limit hit ({err_code})"
+                else:
+                    uw_ok = False
+                    uw_detail = f"error {err_code}"
+            else:
+                uw_ok = True
+                uw_detail = "HTTP 200"
+        elif code == "429":
+            uw_ok = True  # reachable but rate limited — still "up"
+            uw_detail = "HTTP 429 rate limited"
+        else:
+            uw_detail = f"HTTP {code}" if code else "no response"
     except Exception as e:
         uw_detail = type(e).__name__
 

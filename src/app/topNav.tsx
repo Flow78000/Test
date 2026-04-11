@@ -51,6 +51,7 @@ const SECTIONS = [
       { href: "/spread-calc", label: "Calculateur" },
       { href: "/pnl-sim", label: "Option Lab" },
       { href: "/pricing-lab", label: "Pricing Lab" },
+      { href: "/spread-gap", label: "Spread Gap" },
       { href: "/messages", label: "Messages" },
     ],
   },
@@ -68,7 +69,7 @@ function getActiveSection(pathname: string): string {
   if (["/regime", "/signals"].some((p) => pathname.startsWith(p))) return "REGIME";
   if (["/vol-", "/term-", "/surface"].some((p) => pathname.startsWith(p))) return "VOL";
   if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk"].some((p) => pathname.startsWith(p))) return "MACRO";
-  if (["/spread", "/pnl", "/pricing-lab", "/messages"].some((p) => pathname.startsWith(p))) return "OUTILS";
+  if (["/spread", "/pnl", "/pricing-lab", "/messages", "/spread-gap"].some((p) => pathname.startsWith(p))) return "OUTILS";
   if (pathname.startsWith("/academie")) return "ACADEMIE";
   return "LIVE";
 }
