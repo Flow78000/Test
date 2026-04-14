@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routers import sierra, regime, market, proxy_uw, menthorq, messages, pricing, news, spread_gap
+from routers import sierra, regime, market, proxy_uw, menthorq, messages, pricing, news, spread_gap, strange_days, news_trading
 from services.tws import connect_tws, disconnect_tws, qualify_all, ensure_connected
 from services.news_archive import start_news_archiver, stop_news_archiver
 from services.range_scheduler import start_range_scheduler, stop_range_scheduler
@@ -100,10 +100,15 @@ app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
 app.include_router(pricing.router, prefix="/api/pricing", tags=["Pricing Lab"])
 app.include_router(news.router, prefix="/api/news", tags=["News Archive"])
 app.include_router(spread_gap.router, prefix="/api/spread-gap", tags=["Spread Gap Tracker"])
+app.include_router(strange_days.router, prefix="/api/strange-days", tags=["Strange Days"])
+app.include_router(news_trading.router, prefix="/api/news-trading", tags=["News Trading"])
 
 @app.get("/api/health")
 def health():
-    from services.tws import ib_connected, qualified
+    # IMPORTANT: importer le MODULE, pas les variables directement.
+    # ib_connected est un bool (immutable) — "from x import y" capture
+    # la valeur au moment de l'import, pas une reference live.
+    from services import tws as tws_mod
     import os
     import time
     import urllib.request
@@ -208,7 +213,11 @@ def health():
 
     sources = {
         "uw": {"ok": uw_ok, "detail": uw_detail, "label": "Unusual Whales API"},
-        "tws": {"ok": ib_connected, "detail": f"{len(qualified)} instruments" if ib_connected else "disconnected", "label": "TWS / Interactive Brokers"},
+        "tws": {
+            "ok": bool(tws_mod.ib_connected and tws_mod.ib and tws_mod.ib.isConnected()),
+            "detail": f"{len(tws_mod.qualified)} instruments" if tws_mod.ib_connected else "disconnected",
+            "label": "TWS / Interactive Brokers",
+        },
         "sierra": {"ok": sierra_ok, "detail": sierra_detail, "label": "Sierra Chart"},
         "range_scheduler": {"ok": range_ok, "detail": range_detail, "label": "Range Scheduler"},
         "news_archive": {"ok": news_ok, "detail": news_detail, "label": "News Archive"},
@@ -219,8 +228,8 @@ def health():
     return {
         "status": "ok" if not critical_down else "degraded",
         "server": "FLO.W v2.0",
-        "tws_connected": ib_connected,
-        "instruments": len(qualified),
+        "tws_connected": bool(tws_mod.ib_connected and tws_mod.ib and tws_mod.ib.isConnected()),
+        "instruments": len(tws_mod.qualified),
         "mode": "MARKET DATA ONLY",
         "sources": sources,
         "critical_down": critical_down,

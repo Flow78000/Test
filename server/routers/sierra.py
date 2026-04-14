@@ -380,6 +380,15 @@ def range_intraday(trading_date: str | None = None, symbol: str | None = None, l
     from services.range_scheduler import get_intraday_history
     return get_intraday_history(trading_date=trading_date, symbol=symbol, limit=limit)
 
+@router.get("/ibs")
+def ibs():
+    """IBS (Internal Bar Strength) statistics for SPY daily bars.
+    Returns monthly IBS heatmap, monthly returns heatmap, quintile stats,
+    IBS distribution histogram, and current-day IBS KPI."""
+    from services.ibs_engine import compute_ibs
+    return compute_ibs()
+
+
 @router.get("/live-alerts")
 def live_alerts():
     """Feed unifie: sigma breakthroughs + 100% touches pour la sidebar/banner."""

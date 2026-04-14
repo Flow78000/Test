@@ -664,6 +664,19 @@ def sierra_gex_analysis(bars=5000):
         if not parsed:
             return {"error": "Aucune donnee GEX parsee"}
 
+        # === CASH SESSION FILTER (09:30 - 16:00 ET) ===
+        # GEX ne cote que pendant la session cash — retirer les barres hors marche
+        def _is_cash_session(row):
+            t = str(row.get("time", ""))
+            if len(t) < 5:
+                return False
+            return "09:30" <= t[:5] <= "16:00"
+
+        parsed = [r for r in parsed if _is_cash_session(r)]
+
+        if not parsed:
+            return {"error": "Aucune donnee GEX en session cash"}
+
         # === CROSSING ANALYSIS ===
         levels = [-40, -30, -20, -10, 0, 10, 20, 30, 40]
         crossings = {str(lvl): {"up": 0, "down": 0, "events": []} for lvl in levels}

@@ -38,9 +38,12 @@ export function fmtPrice(v: number | null | undefined): string {
 }
 
 export function timeAgo(ts: string): string {
+  if (!ts) return "--";
   const d = new Date(ts);
+  if (isNaN(d.getTime())) return "--";
   const now = new Date();
   const min = Math.round((now.getTime() - d.getTime()) / 60000);
+  if (min < 0) return "--";
   if (min < 1) return "MAINTENANT";
   if (min < 60) return `il y a ${min}min`;
   if (min < 1440) return `il y a ${Math.round(min / 60)}h`;

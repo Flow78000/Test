@@ -1,8 +1,15 @@
 """
 TWS Connection — Market Data Only (readonly=True)
 AUCUNE donnee personnelle : pas de positions, P&L, equity, comptes, ordres.
+
+Python 3.14 + uvicorn impose des regles strictes sur asyncio. ib_insync
+a besoin de son propre event loop isole. On le lance dans un thread dedie
+(_ib_thread) dont le loop (_ib_loop) tourne en permanence via run_forever().
+Toutes les operations async IB passent par run_coroutine_threadsafe().
 """
 import time
+import asyncio
+import threading
 from ib_insync import IB, Stock, Index, Forex, Future
 
 TWS_HOST = "127.0.0.1"
@@ -13,6 +20,36 @@ ib = None
 ib_connected = False
 data_cache = {}
 CACHE_TTL = 30
+
+# ================================================================
+# Dedicated IB event loop thread (Python 3.14 compatible)
+# ================================================================
+_ib_loop: asyncio.AbstractEventLoop | None = None
+_ib_thread: threading.Thread | None = None
+
+
+def _run_ib_loop():
+    global _ib_loop
+    _ib_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_ib_loop)
+    _ib_loop.run_forever()
+
+
+def _ensure_ib_thread():
+    global _ib_thread
+    if _ib_thread is not None and _ib_thread.is_alive():
+        return
+    _ib_thread = threading.Thread(target=_run_ib_loop, daemon=True, name="ib-event-loop")
+    _ib_thread.start()
+    time.sleep(0.3)  # let loop spin up
+
+
+def _run_ib_coro(coro, timeout=15):
+    """Run an async coroutine on the IB event loop thread (threadsafe)."""
+    _ensure_ib_thread()
+    future = asyncio.run_coroutine_threadsafe(coro, _ib_loop)
+    return future.result(timeout=timeout)
+
 
 # ================================================================
 # WATCHLISTS — market data instruments only
@@ -80,14 +117,25 @@ def set_cache(key, data):
 
 
 # ================================================================
-# TWS Connection
+# TWS Connection (runs on dedicated IB thread)
 # ================================================================
 
 def connect_tws():
     global ib, ib_connected
     try:
-        ib = IB()
-        ib.connect(TWS_HOST, TWS_PORT, clientId=TWS_CLIENT_ID, timeout=10, readonly=True)
+        _ensure_ib_thread()
+
+        async def _do_connect():
+            ib_new = IB()
+            await ib_new.connectAsync(
+                TWS_HOST, TWS_PORT,
+                clientId=TWS_CLIENT_ID,
+                timeout=15,
+                readonly=True,
+            )
+            return ib_new
+
+        ib = _run_ib_coro(_do_connect(), timeout=20)
         ib_connected = True
         print(f"  [TWS] Connecte en lecture seule (market data)")
         return True
@@ -101,7 +149,9 @@ def disconnect_tws():
     global ib, ib_connected
     if ib_connected and ib:
         try:
-            ib.disconnect()
+            async def _do_disconnect():
+                ib.disconnect()
+            _run_ib_coro(_do_disconnect(), timeout=5)
         except Exception:
             pass
     ib_connected = False
@@ -113,14 +163,22 @@ def qualify_all():
         return
     print("  [TWS] Qualification des contrats...")
     count = 0
-    for name, contract in ALL_WATCHLIST.items():
-        try:
-            q = ib.qualifyContracts(contract)
-            if q:
-                qualified[name] = q[0]
-                count += 1
-        except Exception as e:
-            print(f"  [!] {name}: {e}")
+
+    async def _qualify():
+        nonlocal count
+        for name, contract in ALL_WATCHLIST.items():
+            try:
+                q = await ib.qualifyContractsAsync(contract)
+                if q:
+                    qualified[name] = q[0]
+                    count += 1
+            except Exception as e:
+                print(f"  [!] {name}: {e}")
+
+    try:
+        _run_ib_coro(_qualify(), timeout=60)
+    except Exception as e:
+        print(f"  [TWS] Qualification error: {e}")
     print(f"  [TWS] {count}/{len(ALL_WATCHLIST)} contrats qualifies")
 
 
@@ -142,8 +200,12 @@ def safe_float(val):
 def ensure_connected():
     """Auto-reconnect if TWS dropped"""
     global ib, ib_connected
-    if ib_connected and ib and ib.isConnected():
-        return True
+    if ib_connected and ib:
+        try:
+            if ib.isConnected():
+                return True
+        except Exception:
+            pass
     # Try reconnect silently
     ib_connected = False
     try:
@@ -152,12 +214,11 @@ def ensure_connected():
                 ib.disconnect()
             except:
                 pass
-        ib = IB()
-        ib.connect(TWS_HOST, TWS_PORT, clientId=TWS_CLIENT_ID, timeout=10, readonly=True)
-        ib_connected = True
-        qualify_all()
-        print("  [TWS] Reconnexion automatique reussie")
-        return True
+        ok = connect_tws()
+        if ok:
+            qualify_all()
+            print("  [TWS] Reconnexion automatique reussie")
+        return ok
     except:
         ib_connected = False
         return False
@@ -171,14 +232,20 @@ def fetch_quotes(names_subset=None):
 
     targets = {k: v for k, v in qualified.items() if names_subset is None or k in names_subset}
 
-    # Request snapshots
-    for name, contract in targets.items():
-        try:
-            ib.reqMktData(contract, genericTickList="", snapshot=True, regulatorySnapshot=False)
-        except Exception:
-            pass
+    # Request snapshots + wait for data on IB loop
+    async def _fetch():
+        for name, contract in targets.items():
+            try:
+                ib.reqMktData(contract, genericTickList="", snapshot=True, regulatorySnapshot=False)
+            except Exception:
+                pass
+        await asyncio.sleep(3)
 
-    ib.sleep(3)
+    try:
+        _run_ib_coro(_fetch(), timeout=10)
+    except Exception:
+        # Fallback: simple wait
+        time.sleep(3)
 
     results = {}
     for name, contract in targets.items():

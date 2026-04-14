@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UWUsageBar } from "@/components/ui/uw-usage-bar";
 
 const SECTIONS = [
   { id: "LIVE", label: "LIVE", color: "#FF6B00", icon: "●",
@@ -12,6 +13,7 @@ const SECTIONS = [
       { href: "/greeks", label: "GEX" },
       { href: "/dark-pool", label: "Dark Pool" },
       { href: "/dark-pool-alerts", label: "DP Alerts" },
+      { href: "/dark-pool-routing", label: "DP Routing" },
       { href: "/straddle", label: "Straddle" },
     ],
   },
@@ -44,6 +46,8 @@ const SECTIONS = [
       { href: "/range-dashboard", label: "Ranges" },
       { href: "/floq", label: "FLO.Q" },
       { href: "/systemic-risk", label: "Stress" },
+      { href: "/strange-days", label: "Strange Days" },
+      { href: "/news-trading", label: "Nanex #1" },
     ],
   },
   { id: "OUTILS", label: "OUTILS", color: "#6B6B75", icon: "⚙",
@@ -53,6 +57,7 @@ const SECTIONS = [
       { href: "/pricing-lab", label: "Pricing Lab" },
       { href: "/spread-gap", label: "Spread Gap" },
       { href: "/messages", label: "Messages" },
+      { href: "/ibs", label: "IBS" },
     ],
   },
   { id: "ACADEMIE", label: "ACADEMIE", color: "#F0F0F0", icon: "",
@@ -65,11 +70,11 @@ const SECTIONS = [
 
 function getActiveSection(pathname: string): string {
   if (pathname === "/") return "LIVE";
-  if (["/chain", "/flow", "/greeks", "/dark-pool", "/dark-pool-alerts", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
+  if (["/chain", "/flow", "/greeks", "/dark-pool", "/dark-pool-alerts", "/dark-pool-routing", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
   if (["/regime", "/signals"].some((p) => pathname.startsWith(p))) return "REGIME";
   if (["/vol-", "/term-", "/surface"].some((p) => pathname.startsWith(p))) return "VOL";
-  if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk"].some((p) => pathname.startsWith(p))) return "MACRO";
-  if (["/spread", "/pnl", "/pricing-lab", "/messages", "/spread-gap"].some((p) => pathname.startsWith(p))) return "OUTILS";
+  if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk", "/strange", "/news-trading"].some((p) => pathname.startsWith(p))) return "MACRO";
+  if (["/spread", "/pnl", "/pricing-lab", "/messages", "/spread-gap", "/ibs"].some((p) => pathname.startsWith(p))) return "OUTILS";
   if (pathname.startsWith("/academie")) return "ACADEMIE";
   return "LIVE";
 }
@@ -123,6 +128,7 @@ export function TopNav() {
         </div>
 
         <div className="ml-auto flex items-center gap-3 text-[10px]">
+          <UWUsageBar />
           <span className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: `${mkt.color}15`, color: mkt.color }}>
             <span className={`w-1.5 h-1.5 rounded-full ${mkt.pulse ? "animate-pulse" : ""}`} style={{ background: mkt.color }} />
             {mkt.label}

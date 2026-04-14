@@ -4,28 +4,87 @@ import subprocess
 import json
 from fastapi import APIRouter, Query
 
+from services.uw_usage import record_request, get_usage
+
 router = APIRouter()
 
 UW_TOKEN = os.environ.get("UW_API_TOKEN", "da6adf76-f312-4572-acff-e7f99d63c650")
 
+
+def _split_headers_body(raw: str):
+    """Split a curl -i response into (headers_raw, body_text).
+    Handles both \r\n\r\n and \n\n, and takes the LAST separator so
+    intermediate redirects are skipped."""
+    if not raw:
+        return "", ""
+    sep = None
+    idx = raw.rfind("\r\n\r\n")
+    if idx >= 0:
+        sep = "\r\n\r\n"
+    else:
+        idx = raw.rfind("\n\n")
+        if idx >= 0:
+            sep = "\n\n"
+    if sep is None:
+        return "", raw
+    return raw[:idx], raw[idx + len(sep):]
+
+
+def _extract_count_header(headers_raw: str):
+    for line in headers_raw.splitlines():
+        if line.lower().startswith("x-uw-daily-req-count:"):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
 def uw_fetch(endpoint: str):
-    """Fetch from UW API via curl (avoids Python urllib 403)"""
+    """Fetch from UW API via curl (avoids Python urllib 403).
+    Also records UW usage via services.uw_usage.record_request."""
     try:
         result = subprocess.run(
-            ["curl", "-s", f"https://api.unusualwhales.com/api{endpoint}",
+            ["curl", "-s", "-i", f"https://api.unusualwhales.com/api{endpoint}",
              "-H", f"Authorization: Bearer {UW_TOKEN}",
              "-H", "Accept: application/json"],
             capture_output=True, text=True, timeout=15
         )
-        if result.stdout and result.stdout.strip():
-            return json.loads(result.stdout)
+        raw = result.stdout or ""
+        headers_raw, body = _split_headers_body(raw)
+        count_header = _extract_count_header(headers_raw)
+
+        parsed = None
+        body_stripped = (body or "").strip()
+        if body_stripped:
+            try:
+                parsed = json.loads(body_stripped)
+            except json.JSONDecodeError:
+                parsed = None
+
+        # Detect UW error envelope (HTTP 200 + {"code": "...", no "data"})
+        error_code = None
+        if isinstance(parsed, dict) and "code" in parsed and "data" not in parsed:
+            error_code = parsed.get("code")
+
+        # Record usage (best-effort)
+        try:
+            record_request(count_header, error_code)
+        except Exception:
+            pass
+
+        if parsed is not None:
+            return parsed
+        if body_stripped:
+            return {"error": "Invalid JSON from UW", "endpoint": endpoint}
         return {"error": "Empty response from UW API", "endpoint": endpoint}
-    except json.JSONDecodeError as e:
-        return {"error": f"Invalid JSON from UW: {str(e)}", "endpoint": endpoint}
     except subprocess.TimeoutExpired:
         return {"error": "UW API timeout (15s)", "endpoint": endpoint}
     except Exception as e:
         return {"error": str(e)}
+
+
+@router.get("/usage")
+def usage():
+    """Retourne l'etat du quota UW quotidien (count / limit / reset)."""
+    return get_usage()
 
 @router.get("/darkpool/{ticker}")
 def darkpool(ticker: str):

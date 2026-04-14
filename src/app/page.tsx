@@ -6,6 +6,7 @@ import { Card, KpiCard, Badge, LiveBadge } from "@/components/ui/card";
 import { SkeletonGrid, ErrorCard } from "@/components/ui/skeleton";
 import { DataFreshness } from "@/components/ui/data-freshness";
 import { ConnectivityBanner } from "@/components/ui/connectivity-banner";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import { fmtPremium, fmtK, timeAgo, regimeFromIV, fmtPrice, fmtPct } from "@/lib/format";
 
 const API = "http://localhost:3850";
@@ -22,7 +23,23 @@ interface DashData {
 async function fetchJson(path: string) {
   const r = await fetch(`${API}${path}`, { signal: AbortSignal.timeout(4000) });
   if (!r.ok) return null;
-  return r.json();
+  const j = await r.json();
+  // UW rate-limit / daily-limit responses come back as HTTP 200 with an
+  // error envelope { code, message }. Treat these as null so the dashboard
+  // shows a graceful "data unavailable" state instead of crashing.
+  if (j && typeof j === "object" && !Array.isArray(j) && "code" in j && "message" in j && !("data" in j)) {
+    return null;
+  }
+  return j;
+}
+
+// Safe array extraction from responses that may be {data:[...]}, [...] or garbage.
+function asArray(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === "object" && Array.isArray((v as { data?: unknown }).data)) {
+    return (v as { data: unknown[] }).data;
+  }
+  return [];
 }
 
 async function loadAll(): Promise<DashData | null> {
@@ -42,27 +59,33 @@ async function loadAll(): Promise<DashData | null> {
     const sect = sectorRes.status === "fulfilled" ? sectorRes.value : null;
     const sierra = sierraRes.status === "fulfilled" ? sierraRes.value : null;
 
-    const ivArr = Array.isArray(iv?.data) ? iv.data : Array.isArray(iv) ? iv : [];
+    const ivArr = asArray(iv) as Array<Record<string, string | number>>;
     const latest = ivArr[ivArr.length - 1];
-    const ivVal = latest ? parseFloat(latest.volatility || 0) * 100 : 0;
-    const ivRank = latest ? parseFloat(latest.iv_rank_1y || 0) : 0;
-    const spyPrice = latest ? parseFloat(latest.close || 0) : 0;
+    const ivVal = latest ? parseFloat(String(latest.volatility ?? 0)) * 100 : 0;
+    const ivRank = latest ? parseFloat(String(latest.iv_rank_1y ?? 0)) : 0;
+    const spyPrice = latest ? parseFloat(String(latest.close ?? 0)) : 0;
+
+    const flowArr = asArray(flow);
+    const sierraSignals = sierra && typeof sierra === "object"
+      ? asArray((sierra as { signals?: unknown }).signals ?? (sierra as { data?: unknown }).data)
+      : [];
+    const sectArr = asArray(sect);
 
     return {
       iv: ivVal, ivRank, spyPrice,
       regime: regimeFromIV(ivVal),
-      dpss: reg?.dpss || null,
-      gex: reg?.gex || null,
-      flowScore: reg?.flow || null,
-      darkPools: (flow?.data || flow || []).slice(0, 5),
-      flowAlerts: (flow?.data || flow || []).slice(0, 3),
-      tide: tide?.data || tide || null,
-      signals: (sierra?.signals || sierra?.data || []).slice(0, 5),
-      sectors: (sect?.data || sect || []).slice(0, 5),
-      sierraFreshness: sierra ? {
-        file_modified: sierra.file_modified,
-        data_age_seconds: sierra.data_age_seconds,
-        is_stale: sierra.is_stale,
+      dpss: (reg as { dpss?: unknown })?.dpss || null,
+      gex: (reg as { gex?: unknown })?.gex || null,
+      flowScore: (reg as { flow?: unknown })?.flow || null,
+      darkPools: flowArr.slice(0, 5),
+      flowAlerts: flowArr.slice(0, 3),
+      tide: (tide as { data?: unknown })?.data || tide || null,
+      signals: sierraSignals.slice(0, 5),
+      sectors: sectArr.slice(0, 5),
+      sierraFreshness: sierra && typeof sierra === "object" ? {
+        file_modified: (sierra as { file_modified?: string }).file_modified,
+        data_age_seconds: (sierra as { data_age_seconds?: number }).data_age_seconds,
+        is_stale: (sierra as { is_stale?: boolean }).is_stale,
       } : null,
     };
   } catch { return null; }
@@ -81,9 +104,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     refresh();
-    const i = setInterval(refresh, 10000);
-    return () => clearInterval(i);
   }, [refresh]);
+  const { paused, reason } = useVisiblePolling(refresh, 10000);
 
   if (loading && !data) return (
     <div className="p-4 space-y-4">
@@ -115,7 +137,9 @@ export default function Dashboard() {
         <Chip label="VVIX" value="--" color="#6B6B75" />
         <Chip label="SPY" value={fmtPrice(data.spyPrice)} color="#F0F0F0" />
         <Chip label="QQQ" value="--" color="#F0F0F0" />
-        <div className="ml-auto"><LiveBadge /></div>
+        <div className="ml-auto flex items-center gap-2">
+          {paused ? <PausedBadge reason={reason} /> : <LiveBadge />}
+        </div>
       </div>
 
       {/* Sierra Data Freshness */}
@@ -152,27 +176,38 @@ export default function Dashboard() {
           <Card className="overflow-hidden">
             <div className="px-3 py-2 border-b border-[#1E1E22] text-[10px] text-[#6B6B75] uppercase">Dark Pool Prints</div>
             <div className="divide-y divide-[#1E1E22]">
-              {data.darkPools.length ? data.darkPools.map((d, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-[11px]">
-                  <span className="text-[#6B6B75] w-12">{d.time ? timeAgo(d.time) : "--"}</span>
-                  <span className="font-bold w-10">{d.ticker || "--"}</span>
-                  <span className="text-[#F0F0F0] flex-1">{d.size ? fmtK(d.size) : "--"}</span>
-                  <span>{d.premium ? fmtPremium(d.premium) : "--"}</span>
-                  <Badge color={d.side === "BUY" ? "#22C55E" : "#EF4444"}>{d.side || "?"}</Badge>
-                </div>
-              )) : <div className="p-3 text-[11px] text-[#6B6B75]">Aucun print</div>}
+              {data.darkPools.length ? data.darkPools.map((d, i) => {
+                const ts = d.time || d.timestamp || d.created_at || "";
+                const vol = d.size || d.volume || 0;
+                const prem = d.premium || d.total_premium || 0;
+                const side = d.side || d.type || "?";
+                const isCall = side === "CALL" || side === "BUY";
+                return (
+                  <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-[11px]">
+                    <span className="text-[#6B6B75] w-12">{ts ? timeAgo(ts) : "--"}</span>
+                    <span className="font-bold w-10">{d.ticker || d.symbol || "--"}</span>
+                    <span className="text-[#F0F0F0] flex-1">{vol ? fmtK(vol) : "--"}</span>
+                    <span>{prem ? fmtPremium(prem) : "--"}</span>
+                    <Badge color={isCall ? "#22C55E" : "#EF4444"}>{side}</Badge>
+                  </div>
+                );
+              }) : <div className="p-3 text-[11px] text-[#6B6B75]">Aucun print</div>}
             </div>
           </Card>
           <Card className="overflow-hidden">
             <div className="px-3 py-2 border-b border-[#1E1E22] text-[10px] text-[#6B6B75] uppercase">Flow Alerts</div>
             <div className="divide-y divide-[#1E1E22]">
-              {data.flowAlerts.length ? data.flowAlerts.map((a, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-[11px]">
-                  <Badge color={a.type === "CALL" ? "#22C55E" : "#EF4444"}>{a.type || "?"}</Badge>
-                  <span className="font-bold">{a.ticker || "--"}</span>
-                  <span className="text-[#6B6B75] flex-1">{a.premium ? fmtPremium(a.premium) : "--"}</span>
-                </div>
-              )) : <div className="p-3 text-[11px] text-[#6B6B75]">Aucune alerte</div>}
+              {data.flowAlerts.length ? data.flowAlerts.map((a, i) => {
+                const aType = a.type || a.option_type || "?";
+                const aPrem = a.premium || a.total_premium || 0;
+                return (
+                  <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-[11px]">
+                    <Badge color={aType === "CALL" ? "#22C55E" : "#EF4444"}>{aType}</Badge>
+                    <span className="font-bold">{a.ticker || a.symbol || "--"}</span>
+                    <span className="text-[#6B6B75] flex-1">{aPrem ? fmtPremium(aPrem) : "--"}</span>
+                  </div>
+                );
+              }) : <div className="p-3 text-[11px] text-[#6B6B75]">Aucune alerte</div>}
             </div>
           </Card>
           <Card className="p-3">
@@ -195,8 +230,8 @@ export default function Dashboard() {
             <div className="divide-y divide-[#1E1E22]">
               {data.signals.length ? data.signals.map((s, i) => (
                 <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-[11px]">
-                  <span className="text-[#6B6B75] w-10">{s.time ? timeAgo(s.time) : "--"}</span>
-                  <span className="font-bold w-8">{s.symbol || "--"}</span>
+                  <span className="text-[#6B6B75] w-10">{timeAgo(s.time || s.timestamp || s.date || "")}</span>
+                  <span className="font-bold w-8">{s.symbol || s.ticker || "--"}</span>
                   <Badge color={s.direction === "LONG" ? "#22C55E" : "#EF4444"}>{s.direction || "?"}</Badge>
                   <span className="text-[#6B6B75] flex-1 text-right">{s.level ?? "--"}</span>
                   <div className="flex gap-0.5">
@@ -240,6 +275,24 @@ export default function Dashboard() {
           </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+function PausedBadge({ reason }: { reason: "hidden" | "idle" | null }) {
+  const label =
+    reason === "idle"
+      ? "EN PAUSE — INACTIF 10 MIN"
+      : reason === "hidden"
+      ? "EN PAUSE — ONGLET MASQUE"
+      : "EN PAUSE";
+  return (
+    <div
+      className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-[#FFA726]/50 bg-[#FFA72615]"
+      title="Les requetes sont suspendues pour economiser le quota. Bouge la souris ou reviens sur l'onglet pour reprendre."
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-[#FFA726]" />
+      <span className="text-[9px] font-bold uppercase tracking-wider text-[#FFA726]">{label}</span>
     </div>
   );
 }
