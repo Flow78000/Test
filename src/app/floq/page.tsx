@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Card, PageHeader, Badge, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 type CommandResponse = {
   success: boolean;
@@ -129,10 +130,8 @@ export default function FloQPage() {
   }, [load]);
 
   // Refresh automatique toutes les 15 minutes (FLO.Q genere des donnees toutes les ~15min intraday, 1x/j EOD)
-  useEffect(() => {
-    const id = setInterval(() => load(false), 15 * 60 * 1000);
-    return () => clearInterval(id);
-  }, [load]);
+  const pollFloq = useCallback(() => load(false), [load]);
+  useVisiblePolling(pollFloq, 15 * 60 * 1000);
 
   const commands = data?.commands || {};
   const slugs = Object.keys(commands);

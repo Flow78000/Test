@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PageHeader, LiveBadge, Card } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 const API = "http://localhost:3850";
 const CURRENCIES = ["EUR", "USD", "JPY", "GBP", "CHF", "AUD", "CAD", "NZD"];
@@ -39,24 +40,21 @@ export default function FxMatrixPage() {
   const [matrixData, setMatrixData] = useState<Record<string, Record<string, number>>>(DEMO_DATA);
   const [isLive, setIsLive] = useState(false);
 
-  useEffect(() => {
-    async function fetchLive() {
-      try {
-        const res = await fetch(`${API}/api/uw/market-tide`).then(r => r.json());
-        if (res && typeof res === "object" && Object.keys(res).length > 0) {
-          // If API returns FX data, use it; otherwise keep demo
-          const fxData = res?.fx_matrix || res?.data?.fx_matrix;
-          if (fxData) {
-            setMatrixData(fxData);
-            setIsLive(true);
-          }
+  const fetchLive = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/uw/market-tide`).then(r => r.json());
+      if (res && typeof res === "object" && Object.keys(res).length > 0) {
+        // If API returns FX data, use it; otherwise keep demo
+        const fxData = res?.fx_matrix || res?.data?.fx_matrix;
+        if (fxData) {
+          setMatrixData(fxData);
+          setIsLive(true);
         }
-      } catch { /* use demo data */ }
-    }
-    fetchLive();
-    const i = setInterval(fetchLive, 10_000);
-    return () => clearInterval(i);
+      }
+    } catch { /* use demo data */ }
   }, []);
+  useEffect(() => { fetchLive(); }, [fetchLive]);
+  useVisiblePolling(fetchLive, 10_000);
 
   // Calculate currency strength (average performance vs all others)
   const strengths = CURRENCIES.map(ccy => {

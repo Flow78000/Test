@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { DataFreshness } from "@/components/ui/data-freshness";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import { fmtNum, fmtPct } from "@/lib/format";
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, ComposedChart,
@@ -88,7 +89,8 @@ function TotalGexTab() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { load(); }, [load]);
+  useVisiblePolling(load, 10000);
 
   if (loading && !gexData) return <div className="text-center py-20 text-[#6B6B75]">Chargement Total GEX...</div>;
   if (!gexData || gexData.error) return <Card className="p-8 text-center text-red-400">{gexData?.error || "Erreur"}</Card>;

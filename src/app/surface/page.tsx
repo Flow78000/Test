@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, PageHeader, Badge, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { VolSurface3D } from "@/components/ui/vol-surface-3d";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts";
@@ -97,11 +98,9 @@ export default function SurfacePage() {
     }
   }, []);
 
-  useEffect(() => {
-    load(ticker);
-    const t = setInterval(() => load(ticker), 60000);
-    return () => clearInterval(t);
-  }, [ticker, load]);
+  useEffect(() => { load(ticker); }, [ticker, load]);
+  const poll = useCallback(() => load(ticker), [ticker, load]);
+  useVisiblePolling(poll, 60000);
 
   const atmChartData =
     data?.atm_term

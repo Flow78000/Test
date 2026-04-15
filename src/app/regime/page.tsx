@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
   ResponsiveContainer, Area, AreaChart
@@ -35,7 +36,8 @@ export default function RegimePage() {
     setLoading(false);
   }
 
-  useEffect(() => { loadRegime(); const i = setInterval(loadRegime, 10000); return () => clearInterval(i); }, []);
+  useEffect(() => { loadRegime(); }, []);
+  useVisiblePolling(loadRegime, 10000);
 
   const regime = data?.regime || {};
   const layers = data?.layers || {};

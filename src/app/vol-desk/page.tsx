@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import {
   LineChart,
   Line,
@@ -123,11 +124,8 @@ export default function VolDeskPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    load();
-    const i = setInterval(load, 10_000);
-    return () => clearInterval(i);
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
+  useVisiblePolling(load, 10_000);
 
   // Derived values
   const iv = current?.volatility ?? current?.iv ?? current?.vix ?? 0;

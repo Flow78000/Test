@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { DataFreshness } from "@/components/ui/data-freshness";
@@ -102,19 +103,18 @@ function VolDeskLiveTab() {
   useEffect(() => {
     load();
     loadTwsStatus();
-    // Auto-refresh every 10s — collect + status
-    const t = setInterval(async () => {
-      try {
-        const res = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
-        if (res && !res.error) {
-          const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
-          if (fresh && !fresh.error) setData(fresh);
-        }
-      } catch { }
-      loadTwsStatus();
-    }, 10000);
-    return () => clearInterval(t);
   }, [load, loadTwsStatus]);
+  const autoRefresh = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+      if (res && !res.error) {
+        const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+        if (fresh && !fresh.error) setData(fresh);
+      }
+    } catch { }
+    loadTwsStatus();
+  }, [loadTwsStatus]);
+  useVisiblePolling(autoRefresh, 10000);
 
   const collect = async () => {
     setCollecting(true);

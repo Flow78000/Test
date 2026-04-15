@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, PageHeader, Badge, KpiCard } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import { fmtNum, fmtPct } from "@/lib/format";
 import {
   LineChart,
@@ -101,11 +102,8 @@ export default function StraddlePage() {
     }
   }, [ticker]);
 
-  useEffect(() => {
-    fetchData();
-    const t = setInterval(fetchData, 10000);
-    return () => clearInterval(t);
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useVisiblePolling(fetchData, 10000);
 
   /* ── Vol term structure data for chart ── */
   const chartData = useMemo(

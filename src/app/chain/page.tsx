@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { PageHeader, LiveBadge, Card, KpiCard, Badge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -305,11 +306,8 @@ export default function ChainPage() {
     setLoading(false);
   }, [ticker, expiry]);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, REFRESH_INTERVAL * 1000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useVisiblePolling(fetchData, REFRESH_INTERVAL * 1000);
 
   // Build strike rows
   const rows: StrikeRow[] = useMemo(() => {

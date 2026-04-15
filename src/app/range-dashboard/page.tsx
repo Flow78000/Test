@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, Card, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 const API = "http://localhost:3850";
 
@@ -110,9 +111,8 @@ export default function RangeDashboardPage() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
   }, [load]);
+  useVisiblePolling(load, 30000);
 
   // Group assets by class, preserving class_order
   const groups = useMemo(() => {

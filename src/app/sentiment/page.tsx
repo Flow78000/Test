@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, Card, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 const API = "http://localhost:3850";
 
@@ -109,11 +110,8 @@ export default function SentimentPage() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 120000);
-    return () => clearInterval(t);
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
+  useVisiblePolling(load, 120000);
 
   const filteredTickers = useMemo(() => {
     if (!data) return [];

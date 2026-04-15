@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { DataFreshness } from "@/components/ui/data-freshness";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 const DELTA_SIGNALS = [
   { asset: "YM", direction: "SHORT", condition: "100% @ 50min", wr: 88, occ: 66, dd: "0.14%" },
@@ -51,9 +52,8 @@ export default function SignalsPage() {
   useEffect(() => {
     loadSignals();
     loadVix();
-    const i = setInterval(loadSignals, 10000);
-    return () => clearInterval(i);
   }, []);
+  useVisiblePolling(loadSignals, 10000);
 
   return (
     <div className="p-6">

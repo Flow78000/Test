@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, Card, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 const API = "http://localhost:3850";
 
@@ -82,11 +83,8 @@ export default function SystemicRiskPage() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
+  useVisiblePolling(load, 60000);
 
   return (
     <div className="p-6">

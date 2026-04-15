@@ -48,7 +48,7 @@ const SECTIONS = [
       { href: "/floq", label: "FLO.Q" },
       { href: "/systemic-risk", label: "Stress" },
       { href: "/strange-days", label: "Strange Days" },
-      { href: "/news-trading", label: "Nanex #1" },
+      { href: "/smart-money", label: "Smart Money" },
     ],
   },
   { id: "OUTILS", label: "OUTILS", color: "#6B6B75", icon: "⚙",
@@ -74,7 +74,7 @@ function getActiveSection(pathname: string): string {
   if (["/chain", "/flow", "/greeks", "/dark-pool", "/dark-pool-alerts", "/dark-pool-routing", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
   if (["/regime", "/signals", "/signals-flow"].some((p) => pathname.startsWith(p))) return "REGIME";
   if (["/vol-", "/term-", "/surface"].some((p) => pathname.startsWith(p))) return "VOL";
-  if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk", "/strange", "/news-trading"].some((p) => pathname.startsWith(p))) return "MACRO";
+  if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk", "/strange", "/smart-money"].some((p) => pathname.startsWith(p))) return "MACRO";
   if (["/spread", "/pnl", "/pricing-lab", "/messages", "/spread-gap", "/ibs"].some((p) => pathname.startsWith(p))) return "OUTILS";
   if (pathname.startsWith("/academie")) return "ACADEMIE";
   return "LIVE";

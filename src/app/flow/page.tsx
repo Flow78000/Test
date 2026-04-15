@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageHeader, LiveBadge, Card, Badge, KpiCard } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -127,11 +128,8 @@ export default function FlowPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10_000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useVisiblePolling(fetchData, 10_000);
 
   // Filtered + sorted
   const filtered = useMemo(() => {

@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routers import sierra, regime, market, proxy_uw, menthorq, messages, pricing, news, spread_gap, strange_days, news_trading
+from routers import sierra, regime, market, proxy_uw, menthorq, messages, pricing, news, spread_gap, strange_days, news_trading, smart_money
 from services.tws import connect_tws, disconnect_tws, qualify_all, ensure_connected
 from services.news_archive import start_news_archiver, stop_news_archiver
 from services.range_scheduler import start_range_scheduler, stop_range_scheduler
@@ -102,6 +102,7 @@ app.include_router(news.router, prefix="/api/news", tags=["News Archive"])
 app.include_router(spread_gap.router, prefix="/api/spread-gap", tags=["Spread Gap Tracker"])
 app.include_router(strange_days.router, prefix="/api/strange-days", tags=["Strange Days"])
 app.include_router(news_trading.router, prefix="/api/news-trading", tags=["News Trading"])
+app.include_router(smart_money.router, prefix="/api/smart-money", tags=["Smart Money"])
 
 @app.get("/api/health")
 def health():

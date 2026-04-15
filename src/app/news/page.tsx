@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { PageHeader, LiveBadge, Card, Badge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 
 const API = "http://localhost:3850";
 
@@ -152,7 +153,8 @@ export default function NewsPage() {
     }
   }, [load]);
 
-  useEffect(() => { load(); const i = setInterval(load, 10_000); return () => clearInterval(i); }, [load]);
+  useEffect(() => { load(); }, [load]);
+  useVisiblePolling(load, 10_000);
 
   const todayEvents = events.filter((ev: any) => isToday(ev.date || ev.datetime || "", tz));
 

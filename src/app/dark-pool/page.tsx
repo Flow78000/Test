@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { PageHeader, Card, KpiCard, Badge, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
+import { useVisiblePolling } from "@/hooks/use-visible-polling";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
@@ -65,7 +66,8 @@ export default function DarkPoolPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); const i = setInterval(load, 10000); return () => clearInterval(i); }, [ticker]);
+  useEffect(() => { load(); }, [ticker]);
+  useVisiblePolling(load, 10000);
 
   const dp = regime?.layers?.dark_pool || {};
 
