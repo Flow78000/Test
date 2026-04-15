@@ -21,6 +21,7 @@ const SECTIONS = [
     pages: [
       { href: "/regime", label: "Engine" },
       { href: "/signals", label: "Signaux" },
+      { href: "/signals-flow", label: "FLOW Signals" },
     ],
   },
   { id: "VOL", label: "VOL", color: "#FFA726", icon: "▲",
@@ -71,7 +72,7 @@ const SECTIONS = [
 function getActiveSection(pathname: string): string {
   if (pathname === "/") return "LIVE";
   if (["/chain", "/flow", "/greeks", "/dark-pool", "/dark-pool-alerts", "/dark-pool-routing", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
-  if (["/regime", "/signals"].some((p) => pathname.startsWith(p))) return "REGIME";
+  if (["/regime", "/signals", "/signals-flow"].some((p) => pathname.startsWith(p))) return "REGIME";
   if (["/vol-", "/term-", "/surface"].some((p) => pathname.startsWith(p))) return "VOL";
   if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk", "/strange", "/news-trading"].some((p) => pathname.startsWith(p))) return "MACRO";
   if (["/spread", "/pnl", "/pricing-lab", "/messages", "/spread-gap", "/ibs"].some((p) => pathname.startsWith(p))) return "OUTILS";
