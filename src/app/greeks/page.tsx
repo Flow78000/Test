@@ -262,7 +262,7 @@ function TotalGexTab() {
                 )}
                 {/* Vertical lines for day boundaries */}
                 {dayBoundaries.map((b, i) => (
-                  <ReferenceLine key={`day-${i}`} x={b.time} stroke="#3A3A3E" strokeWidth={1} strokeDasharray="2 4" label={{ value: b.dayName, position: "top", fill: "#6B6B75", fontSize: 9 }} />
+                  <ReferenceLine key={`day-${i}`} x={b.xKey} stroke="#3A3A3E" strokeWidth={1} strokeDasharray="2 4" label={{ value: b.dayName, position: "top", fill: "#6B6B75", fontSize: 9 }} />
                 ))}
                 {/* One line per day with its color */}
                 {days.map(d => (

@@ -359,7 +359,7 @@ export default function SmartMoneyPage() {
 
   async function load() {
     try {
-      const r = await fetch(`${API}/api/smart-money/`, { cache: "no-store" });
+      const r = await fetch(`${API}/api/alpha-hunter/`, { cache: "no-store" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j = await r.json();
       setData(j);
@@ -388,8 +388,8 @@ export default function SmartMoneyPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#F0F0F0] p-6">
       <PageHeader
-        title="Smart Money"
-        subtitle="Flux options inhabituels + news actives — détecte où l'argent se positionne"
+        title="Alpha Hunter"
+        subtitle="Chasse aux signaux à edge : flux options inhabituels croisés avec news actives"
         timer={
           <div className="flex items-center gap-3">
             <LiveBadge />

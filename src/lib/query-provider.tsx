@@ -1,7 +1,8 @@
 "use client";
 
 import { QueryClient, QueryClientProvider, defaultShouldDehydrateQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { installFetchCache } from "@/lib/fetch-cache";
 
 /**
  * Single QueryClient for the whole app.
@@ -33,5 +34,10 @@ function makeClient() {
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   // useState ensures the client is created once per browser session
   const [client] = useState(makeClient);
+
+  // Install the global fetch cache once on first mount so every page
+  // (whether or not it uses React Query) gets SWR-style caching for free.
+  useEffect(() => { installFetchCache(); }, []);
+
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

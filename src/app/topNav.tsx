@@ -1,8 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback } from "react";
 import { UWUsageBar } from "@/components/ui/uw-usage-bar";
+
+const API = "http://localhost:3850";
+
+/** Per-route prefetch endpoints — fired on hover so data is warm before click. */
+const ROUTE_PREFETCH: Record<string, readonly string[]> = {
+  "/": [`${API}/api/regime/full`, `${API}/api/uw/usage`],
+  "/dark-pool": [`${API}/api/regime/full`, `${API}/api/uw/darkpool/SPY`, `${API}/api/regime/history`],
+  "/dark-pool-alerts": [`${API}/api/uw/darkpool-alerts`],
+  "/greeks": [`${API}/api/sierra/gex-analysis?bars=8000`, `${API}/api/sierra/signals?symbol=SP500GEX`],
+  "/regime": [`${API}/api/regime/full`, `${API}/api/regime/history`],
+  "/surface": [`${API}/api/uw/vol-surface?ticker=SPY`],
+  "/term-structure": [`${API}/api/uw/vol-surface?ticker=SPY`],
+  "/vol-cone": [`${API}/api/uw/vol-surface?ticker=SPY`],
+  "/vol-map": [`${API}/api/uw/vol-surface?ticker=SPY`],
+  "/news": [`${API}/api/news/recent`],
+  "/sentiment": [`${API}/api/sentiment/full`],
+  "/heatmap": [`${API}/api/uw/heatmap`],
+  "/flow": [`${API}/api/uw/option-trades/flow-alerts`],
+  "/chain": [`${API}/api/uw/option-contracts?ticker=SPY`],
+};
+
+/** Fire-and-forget prefetch via the cached global fetch. */
+function prefetchRoute(href: string) {
+  const urls = ROUTE_PREFETCH[href];
+  if (!urls || typeof window === "undefined") return;
+  for (const u of urls) {
+    // The global fetch interceptor (fetch-cache.ts) will cache the response,
+    // so the actual page mount finds the data already in cache → instant render.
+    fetch(u).catch(() => {});
+  }
+}
 
 const SECTIONS = [
   { id: "LIVE", label: "LIVE", color: "#FF6B00", icon: "●",
@@ -48,7 +80,7 @@ const SECTIONS = [
       { href: "/floq", label: "FLO.Q" },
       { href: "/systemic-risk", label: "Stress" },
       { href: "/strange-days", label: "Strange Days" },
-      { href: "/smart-money", label: "Smart Money" },
+      { href: "/alpha-hunter", label: "Alpha Hunter" },
     ],
   },
   { id: "OUTILS", label: "OUTILS", color: "#6B6B75", icon: "⚙",
@@ -74,7 +106,7 @@ function getActiveSection(pathname: string): string {
   if (["/chain", "/flow", "/greeks", "/dark-pool", "/dark-pool-alerts", "/dark-pool-routing", "/straddle"].some((p) => pathname.startsWith(p))) return "LIVE";
   if (["/regime", "/signals", "/signals-flow"].some((p) => pathname.startsWith(p))) return "REGIME";
   if (["/vol-", "/term-", "/surface"].some((p) => pathname.startsWith(p))) return "VOL";
-  if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk", "/strange", "/smart-money"].some((p) => pathname.startsWith(p))) return "MACRO";
+  if (["/heatmap", "/news", "/sentiment", "/earnings", "/calendrier", "/central", "/fx-", "/range", "/floq", "/systemic-risk", "/strange", "/alpha-hunter"].some((p) => pathname.startsWith(p))) return "MACRO";
   if (["/spread", "/pnl", "/pricing-lab", "/messages", "/spread-gap", "/ibs"].some((p) => pathname.startsWith(p))) return "OUTILS";
   if (pathname.startsWith("/academie")) return "ACADEMIE";
   return "LIVE";
@@ -93,9 +125,17 @@ function getMarketStatus() {
 
 export function TopNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const active = getActiveSection(pathname);
   const mkt = getMarketStatus();
   const activeSection = SECTIONS.find((s) => s.id === active);
+
+  // On hover: prefetch the Next.js route bundle AND the page's API data,
+  // so by the time the user clicks, both code and data are ready.
+  const handleHover = useCallback((href: string) => {
+    try { router.prefetch(href); } catch {}
+    prefetchRoute(href);
+  }, [router]);
 
   return (
     <nav className="flex-shrink-0">
@@ -115,6 +155,9 @@ export function TopNav() {
               <Link
                 key={s.id}
                 href={s.pages[0].href}
+                prefetch
+                onMouseEnter={() => handleHover(s.pages[0].href)}
+                onFocus={() => handleHover(s.pages[0].href)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold tracking-wide transition-all ${
                   isActive
                     ? "bg-[#FF6B00] text-black font-bold"
@@ -150,6 +193,9 @@ export function TopNav() {
               <Link
                 key={p.href}
                 href={p.href}
+                prefetch
+                onMouseEnter={() => handleHover(p.href)}
+                onFocus={() => handleHover(p.href)}
                 className={`px-3 py-1 text-[11px] font-medium transition-all rounded-sm ${
                   isActivePage
                     ? "text-[#FF6B00] border-b-2 border-[#FF6B00]"

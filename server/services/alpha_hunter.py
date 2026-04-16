@@ -1,9 +1,9 @@
 """
-FLO.W - Smart Money Scanner (ex Nanex #1)
-==========================================
-Detecte les tickers sur lesquels l'argent "intelligent" se positionne :
-gros flux options (calls/puts premium > seuil) croises avec presence
-dans l'actualite recente.
+FLO.W - Alpha Hunter (ex Nanex #1)
+===================================
+Chasse les signaux a edge : tickers ou les gros flux options (calls/puts
+premium > seuil) croises avec la presence d'actualite recente signalent
+un positionnement "informe".
 
 Logique :
 1. Recupere les flow alerts UW (trades options avec premium significatif)
@@ -147,7 +147,7 @@ def _news_tickers(item: Dict[str, Any]) -> List[str]:
 # ---------------------------------------------------------------------------
 # Main scanner
 # ---------------------------------------------------------------------------
-def scan_smart_money(
+def scan_alpha_hunter(
     min_premium: float = 250_000,
     premium_threshold: float = 500_000,
 ) -> Dict[str, Any]:
@@ -159,7 +159,7 @@ def scan_smart_money(
         min_premium: seuil minimum par trade (filtrage initial)
         premium_threshold: seuil de significance pour remonter un ticker
     """
-    cached = _cached("smart_money_result")
+    cached = _cached("alpha_hunter_result")
     if cached is not None:
         return cached
 
@@ -369,7 +369,7 @@ def scan_smart_money(
         },
     }
 
-    _store("smart_money_result", result)
+    _store("alpha_hunter_result", result)
     return result
 
 
