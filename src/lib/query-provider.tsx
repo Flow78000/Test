@@ -1,6 +1,6 @@
 "use client";
 
-import { QueryClient, QueryClientProvider, defaultShouldDehydrateQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { installFetchCache } from "@/lib/fetch-cache";
 

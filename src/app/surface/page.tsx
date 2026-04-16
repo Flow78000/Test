@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Card, PageHeader, Badge, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
 import { VolSurface3D } from "@/components/ui/vol-surface-3d";
-import { useVisiblePolling } from "@/hooks/use-visible-polling";
+import { useApiQueryStrict } from "@/lib/use-api-query";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts";
@@ -78,29 +78,23 @@ function IvCell({ v, n, min, max }: { v: number | null; n: number; min: number; 
 
 export default function SurfacePage() {
   const [ticker, setTicker] = useState("SPY");
-  const [data, setData] = useState<SurfaceResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (t: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const r = await fetch(`${API}/api/uw/vol-surface?ticker=${t}`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const json = await r.json();
-      if (!json.ok) throw new Error(json.error || "Unknown error");
-      setData(json);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // React Query: result is cached for the QueryClient lifetime, persists across
+  // navigations, and is shared with the hover-prefetch fired from TopNav.
+  const q = useApiQueryStrict<SurfaceResponse>(
+    ["vol-surface", ticker],
+    `/api/uw/vol-surface?ticker=${ticker}`,
+    {
+      refetchInterval: 60_000,
+      // Keep showing the previous ticker's data while a new one loads instead
+      // of flashing a blank "Construction..." screen.
+      placeholderData: (prev) => prev,
+    },
+  );
 
-  useEffect(() => { load(ticker); }, [ticker, load]);
-  const poll = useCallback(() => load(ticker), [ticker, load]);
-  useVisiblePolling(poll, 60000);
+  const data = q.data ?? null;
+  const loading = q.isLoading;       // true only on the very first request, no prev data
+  const error = q.error?.message ?? null;
 
   const atmChartData =
     data?.atm_term
@@ -142,11 +136,19 @@ export default function SurfacePage() {
         <LiveBadge />
       </PageHeader>
 
+      {/* Non-blocking refresh indicator: keeps current data visible while refetching */}
+      {q.isFetching && data && (
+        <div className="absolute top-2 right-4 z-50 flex items-center gap-1.5 text-[10px] text-[#FF6B00] bg-[#FF6B0010] border border-[#FF6B0033] px-2 py-0.5 rounded">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse" />
+          REFRESH
+        </div>
+      )}
+
       {loading && !data ? (
         <Card className="p-12 text-center text-[#6B6B75]">
           Construction de la surface IV pour {ticker}...
         </Card>
-      ) : error ? (
+      ) : error && !data ? (
         <Card className="p-12 text-center text-[#6B6B75]">
           <span className="text-[#FF6B00] font-semibold">Erreur</span>
           <div className="text-xs mt-2">{error}</div>
