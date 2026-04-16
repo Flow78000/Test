@@ -47,22 +47,20 @@ _last_new_count: int = 0
 # Helpers
 # ---------------------------------------------------------------------------
 def _uw_headlines() -> List[Dict[str, Any]]:
-    try:
-        res = subprocess.run(
-            ["curl", "-s", "https://api.unusualwhales.com/api/news/headlines",
-             "-H", f"Authorization: Bearer {UW_TOKEN}",
-             "-H", "Accept: application/json"],
-            capture_output=True, text=True, timeout=20,
-        )
-        if not res.stdout:
+    """Fetch UW news headlines via the centralised pooled client.
+
+    Headlines are polled by a background thread; cache TTL is short (~30s) so
+    polling stays effective while still benefitting from connection pooling
+    and central usage tracking.
+    """
+    from services.uw_client import uw_get
+    data = uw_get("/news/headlines", ttl=30)
+    if isinstance(data, dict):
+        if "error" in data and "data" not in data:
             return []
-        data = json.loads(res.stdout)
-        if isinstance(data, dict):
-            return data.get("data") or data.get("headlines") or []
-        if isinstance(data, list):
-            return data
-    except Exception:
-        return []
+        return data.get("data") or data.get("headlines") or []
+    if isinstance(data, list):
+        return data
     return []
 
 

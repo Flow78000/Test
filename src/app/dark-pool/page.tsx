@@ -1,15 +1,23 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader, Card, KpiCard, Badge, LiveBadge } from "@/components/ui/card";
 import { RefreshTimer } from "@/components/ui/refresh-timer";
-import { useVisiblePolling } from "@/hooks/use-visible-polling";
+import { useApiQuery } from "@/lib/use-api-query";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts";
 
 const API = "http://localhost:3850";
+
+/** Today's date in YYYY-MM-DD using local timezone */
+function todayStr(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
 
 function darkTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -40,34 +48,46 @@ function timeAgo(ts: string) {
 }
 
 export default function DarkPoolPage() {
-  const [regime, setRegime] = useState<any>(null);
-  const [prints, setPrints] = useState<any[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [ticker, setTicker] = useState("SPY");
+  const [requestedDate, setRequestedDate] = useState<string>(todayStr());
 
-  async function load() {
-    try {
-      const [regimeResp, printsResp, histResp] = await Promise.allSettled([
-        fetch(`${API}/api/regime/full`).then(r => r.json()),
-        fetch(`${API}/api/uw/darkpool/${ticker}`).then(r => r.json()),
-        fetch(`${API}/api/regime/history`).then(r => r.json()),
-      ]);
+  // React Query: cached across navigations, polled every 10s, refresh in background.
+  // The trader sees instant data on page-return; UW counter ticks only when the
+  // 20s staleTime expires (vs every navigation in the old useEffect pattern).
+  const regimeQ = useApiQuery<any>(
+    ["regime-full"],
+    "/api/regime/full",
+    { refetchInterval: 10_000 },
+  );
+  const printsQ = useApiQuery<any>(
+    ["darkpool", ticker, requestedDate],
+    `/api/uw/darkpool/${ticker}?date=${requestedDate}`,
+    { refetchInterval: 10_000 },
+  );
+  const histQ = useApiQuery<any>(
+    ["regime-history"],
+    "/api/regime/history",
+    { staleTime: 5 * 60_000 }, // history is daily — no need to refetch often
+  );
 
-      if (regimeResp.status === "fulfilled") setRegime(regimeResp.value);
-      if (printsResp.status === "fulfilled") {
-        const d = printsResp.value?.data || printsResp.value || [];
-        setPrints(Array.isArray(d) ? d : []);
-      }
-      if (histResp.status === "fulfilled") {
-        setHistory(histResp.value?.daily || []);
-      }
-    } catch { }
-    setLoading(false);
-  }
+  const regime = regimeQ.data;
+  const prints: any[] = useMemo(() => {
+    const d = printsQ.data?.data || printsQ.data || [];
+    return Array.isArray(d) ? d : [];
+  }, [printsQ.data]);
+  const history: any[] = histQ.data?.daily || [];
+  const loading = regimeQ.isLoading || printsQ.isLoading;
 
-  useEffect(() => { load(); }, [ticker]);
-  useVisiblePolling(load, 10000);
+  // Detect actual freshness from the prints' executed_at timestamps
+  const printsMeta = useMemo(() => {
+    if (!prints.length) return { latestTs: null as string | null, dataDate: null as string | null, isToday: false };
+    const tsValues = prints.map(p => p.executed_at).filter(Boolean).sort();
+    const latestTs = tsValues[tsValues.length - 1] || null;
+    const dataDate = latestTs ? latestTs.slice(0, 10) : null;
+    return { latestTs, dataDate, isToday: dataDate === todayStr() };
+  }, [prints]);
+
+  const load = () => { regimeQ.refetch(); printsQ.refetch(); histQ.refetch(); };
 
   const dp = regime?.layers?.dark_pool || {};
 
@@ -170,6 +190,45 @@ export default function DarkPoolPage() {
         <button onClick={load} className="px-3 py-1.5 bg-[#111114] border border-[#1E1E22] rounded-lg text-xs hover:border-[#FF6B00] transition-colors">Rafraichir</button>
         <LiveBadge />
       </PageHeader>
+
+      {/* Freshness bar: explicit date of the data + Front Day toggle */}
+      <div className="mb-4 flex items-center gap-3 px-3 py-2 rounded-lg border" style={{
+        background: printsMeta.isToday ? "#22C55E10" : "#FFA72610",
+        borderColor: printsMeta.isToday ? "#22C55E33" : "#FFA72633",
+      }}>
+        <span className={`w-2 h-2 rounded-full ${printsMeta.isToday ? "animate-pulse" : ""}`} style={{ background: printsMeta.isToday ? "#22C55E" : "#FFA726" }} />
+        <span className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: printsMeta.isToday ? "#22C55E" : "#FFA726" }}>
+          {printsMeta.isToday ? "FRONT DAY" : "DELAYED"}
+        </span>
+        <span className="text-xs text-[#A0A0A8]">
+          Date des prints : <span className="font-mono font-bold text-[#F0F0F0]">{printsMeta.dataDate || "—"}</span>
+          {printsMeta.latestTs && (
+            <span className="ml-3 text-[#6B6B75]">
+              Dernier print : <span className="font-mono">{printsMeta.latestTs.slice(11, 19)} UTC</span>
+            </span>
+          )}
+          <span className="ml-3 text-[#6B6B75]">
+            ({prints.length.toLocaleString()} prints reçus)
+          </span>
+        </span>
+        <div className="ml-auto flex items-center gap-2">
+          <label className="text-[10px] text-[#6B6B75] uppercase">Date demandée</label>
+          <input
+            type="date"
+            value={requestedDate}
+            max={todayStr()}
+            onChange={e => setRequestedDate(e.target.value)}
+            className="bg-[#0D0D10] border border-[#1E1E22] rounded px-2 py-1 text-xs font-mono"
+          />
+          <button
+            onClick={() => setRequestedDate(todayStr())}
+            disabled={requestedDate === todayStr()}
+            className="px-2 py-1 text-[10px] uppercase tracking-wider rounded border border-[#1E1E22] text-[#FF6B00] hover:bg-[#FF6B0010] disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ⟲ Aujourd'hui
+          </button>
+        </div>
+      </div>
 
       {loading && !printAnalysis ? (
         <div className="text-center py-20 text-[#6B6B75]">Chargement des prints dark pool...</div>

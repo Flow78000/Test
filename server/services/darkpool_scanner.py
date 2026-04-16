@@ -61,25 +61,21 @@ ALERT_TTL_MINUTES = 45
 # UW fetch helper (parallel, resilient)
 # ---------------------------------------------------------------------------
 def _uw_darkpool(ticker: str) -> List[Dict[str, Any]]:
-    """Fetch dark pool prints for one ticker via curl. Returns [] on error."""
-    try:
-        result = subprocess.run(
-            ["curl", "-s", f"https://api.unusualwhales.com/api/darkpool/{ticker}",
-             "-H", f"Authorization: Bearer {UW_TOKEN}",
-             "-H", "Accept: application/json"],
-            capture_output=True, text=True, timeout=10
-        )
-        if not result.stdout:
+    """Fetch dark pool prints for one ticker via the centralised pooled UW client.
+
+    Routes through `services.uw_client` so usage is tracked and the response is
+    cached for ~30s (DEFAULT_TTLS in uw_client). Returns [] on error.
+    """
+    from services.uw_client import uw_get
+    payload = uw_get(f"/darkpool/{ticker}")
+    if isinstance(payload, dict):
+        if "error" in payload and "data" not in payload:
             return []
-        payload = json.loads(result.stdout)
-        if isinstance(payload, dict):
-            data = payload.get("data") or payload.get("prints") or []
-            return data if isinstance(data, list) else []
-        if isinstance(payload, list):
-            return payload
-        return []
-    except Exception:
-        return []
+        data = payload.get("data") or payload.get("prints") or []
+        return data if isinstance(data, list) else []
+    if isinstance(payload, list):
+        return payload
+    return []
 
 
 # ---------------------------------------------------------------------------

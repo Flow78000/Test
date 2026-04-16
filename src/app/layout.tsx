@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { TopNav } from "./topNav";
+import { QueryProvider } from "@/lib/query-provider";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -29,10 +30,12 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${outfit.variable} dark`}>
       <body className="min-h-screen bg-[#08080A] text-[#F0F0F0] font-sans">
-        <div className="flex flex-col h-screen overflow-hidden">
-          <TopNav />
-          <main className="flex-1 overflow-auto">{children}</main>
-        </div>
+        <QueryProvider>
+          <div className="flex flex-col h-screen overflow-hidden">
+            <TopNav />
+            <main className="flex-1 overflow-auto">{children}</main>
+          </div>
+        </QueryProvider>
       </body>
     </html>
   );

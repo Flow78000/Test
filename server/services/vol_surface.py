@@ -18,12 +18,12 @@ Output:
 """
 from __future__ import annotations
 
-import json
 import math
 import os
-import subprocess
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+
+from services.uw_client import uw_get
 
 
 UW_TOKEN = os.environ.get("UW_API_TOKEN", "da6adf76-f312-4572-acff-e7f99d63c650")
@@ -57,18 +57,17 @@ DTE_BUCKETS = [
 
 
 def _uw_fetch(endpoint: str) -> Any:
-    try:
-        result = subprocess.run(
-            ["curl", "-s", f"https://api.unusualwhales.com/api{endpoint}",
-             "-H", f"Authorization: Bearer {UW_TOKEN}",
-             "-H", "Accept: application/json"],
-            capture_output=True, text=True, timeout=15
-        )
-        if not result.stdout:
-            return None
-        return json.loads(result.stdout)
-    except Exception:
+    """Thin wrapper around the centralised pooled UW client.
+
+    Previously spawned a `curl` subprocess per call which (a) bypassed the
+    usage tracker leaving the dashboard counter at 0 and (b) silently
+    returned `None` on any error envelope, causing the cryptic
+    "Cannot fetch spot price" failure on the Surface page.
+    """
+    result = uw_get(endpoint)
+    if isinstance(result, dict) and "error" in result and "data" not in result:
         return None
+    return result
 
 
 def _parse_symbol(sym: str, ticker: str) -> Tuple[Optional[str], Optional[str], float]:

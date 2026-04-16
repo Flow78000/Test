@@ -36,32 +36,88 @@ function getDayOfWeek(dateStr: string): number {
   return d.getDay();
 }
 
+// Format date "2026-4-9" to "09/04"
+function fmtDateShort(dateStr: string): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length < 3) return dateStr;
+  return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}`;
+}
+
+// Build composite "x" key combining date + time so each tick is unique across days
+function buildXKey(d: any): string {
+  return `${d.date || ""}|${d.time || ""}`;
+}
+
 // Add day color + detect day boundaries in time_series
 function enrichTimeSeries(data: any[]) {
-  if (!data?.length) return { enriched: [], dayBoundaries: [] };
+  if (!data?.length) return { enriched: [], dayBoundaries: [], dateRange: "" };
   const enriched = data.map((d: any) => {
     const day = getDayOfWeek(d.date);
-    return { ...d, _day: day, _dayColor: DAY_COLORS[day] || "#6B6B75" };
+    return {
+      ...d,
+      _day: day,
+      _dayColor: DAY_COLORS[day] || "#6B6B75",
+      _x: buildXKey(d),
+      _dayName: DAY_NAMES[day] || "?",
+      _dateShort: fmtDateShort(d.date),
+    };
   });
   // Find indices where day changes
-  const dayBoundaries: { index: number; time: string; dayName: string }[] = [];
+  const dayBoundaries: { index: number; xKey: string; dayName: string; dateShort: string }[] = [];
   for (let i = 1; i < enriched.length; i++) {
     if (enriched[i]._day !== enriched[i - 1]._day && enriched[i]._day >= 0) {
       dayBoundaries.push({
         index: i,
-        time: enriched[i].time,
+        xKey: enriched[i]._x,
         dayName: DAY_NAMES[enriched[i]._day] || "?",
+        dateShort: enriched[i]._dateShort,
       });
     }
   }
-  return { enriched, dayBoundaries };
+  // Date range string: first date - last date
+  const firstDate = enriched.find((d: any) => d.date)?.date || "";
+  const lastDate = [...enriched].reverse().find((d: any) => d.date)?.date || "";
+  const dateRange = firstDate === lastDate
+    ? fmtDateShort(firstDate)
+    : `${fmtDateShort(firstDate)} → ${fmtDateShort(lastDate)}`;
+  return { enriched, dayBoundaries, dateRange };
 }
 
-function darkTooltip({ active, payload, label }: any) {
+// Custom tick that shows time, with date+day on day-boundary ticks
+function makeAxisTick(enriched: any[], dayBoundaries: any[]) {
+  const boundarySet = new Set(dayBoundaries.map(b => b.xKey));
+  return ({ x, y, payload }: any) => {
+    const row = enriched.find((d: any) => d._x === payload.value);
+    if (!row) return null as any;
+    const isBoundary = boundarySet.has(payload.value);
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text x={0} y={10} textAnchor="middle" fill="#9A9AA5" fontSize={9} fontFamily="monospace">
+          {row.time}
+        </text>
+        {isBoundary && (
+          <text x={0} y={22} textAnchor="middle" fontSize={9} fontWeight={700} fill={row._dayColor || "#6B6B75"}>
+            {row._dayName} {row._dateShort}
+          </text>
+        )}
+      </g>
+    );
+  };
+}
+
+function darkTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload || {};
+  const dayName = row._dayName || "";
+  const dateShort = row._dateShort || "";
+  const time = row.time || "";
+  const headerLabel = [dayName, dateShort, time].filter(Boolean).join(" — ");
   return (
     <div className="bg-[#1A1A1E] border border-[#2A2A2E] rounded px-3 py-2 text-xs shadow-xl z-50">
-      <div className="text-[#6B6B75] mb-1">{label}</div>
+      <div className="text-[#F0F0F0] mb-1 font-semibold" style={{ borderLeft: `3px solid ${row._dayColor || "#6B6B75"}`, paddingLeft: 6 }}>
+        {headerLabel || "—"}
+      </div>
       {payload.map((p: any) => (
         <div key={p.dataKey} style={{ color: p.color }}>
           {p.name}: {typeof p.value === "number" ? p.value.toFixed(2) : p.value}

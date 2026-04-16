@@ -65,17 +65,14 @@ def save_regime_history(history):
 # --- UW API helper ---
 
 def curl_uw(endpoint):
-    """Fetch from UW API via curl (avoids Python urllib 403 issue)"""
-    try:
-        result = subprocess.run(
-            ["curl", "-s", f"https://api.unusualwhales.com/api{endpoint}",
-             "-H", f"Authorization: Bearer {UW_TOKEN}",
-             "-H", "Accept: application/json"],
-            capture_output=True, text=True, timeout=15
-        )
-        return json.loads(result.stdout) if result.stdout else None
-    except Exception as e:
-        return {"error": str(e)}
+    """Fetch from UW API via the centralised pooled client.
+
+    Kept under the legacy name for backward compatibility with existing call
+    sites (compute_full_regime, etc.). All calls now share the connection
+    pool, the TTL cache, and the usage tracker.
+    """
+    from services.uw_client import uw_get
+    return uw_get(endpoint)
 
 
 # --- Layer 1: Dark Pool Proxy DIX (DPSS) ---
