@@ -395,6 +395,26 @@ def vol_surface(ticker: str = "SPY"):
     from services.vol_surface import build_vol_surface
     return build_vol_surface(ticker)
 
+@router.get("/interpolated-iv")
+def interpolated_iv(ticker: str = "SPY"):
+    """Smoothed interpolated IV across standard DTE points (1,5,7,14,30,60,90,180,365)."""
+    return uw_fetch(f"/stock/{ticker}/interpolated-iv")
+
+@router.get("/vol-term-structure")
+def vol_term_structure(ticker: str = "SPY"):
+    """IV term structure — one IV per expiration date."""
+    return uw_fetch(f"/stock/{ticker}/volatility/term-structure")
+
+@router.get("/vol-stats")
+def vol_stats(ticker: str = "SPY"):
+    """Volatility statistics — IV, IV rank, RV, ranges."""
+    return uw_fetch(f"/stock/{ticker}/volatility/stats")
+
+@router.get("/risk-reversal-skew")
+def risk_reversal_skew(ticker: str = "SPY"):
+    """Historical 25-delta risk reversal skew time series."""
+    return uw_fetch(f"/stock/{ticker}/historical-risk-reversal-skew")
+
 @router.get("/stock-info")
 def stock_info(ticker: str = "SPY"):
     return uw_fetch(f"/stock/{ticker}")

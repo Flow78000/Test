@@ -55,12 +55,16 @@ export function VolSurface3D({
         y: yValues,
         z,
         colorscale: [
-          [0, "#42A5F5"],
-          [0.25, "#66BB6A"],
-          [0.5, "#FFA726"],
-          [0.75, "#FF7043"],
-          [1, "#EF4444"],
+          [0, "#0D47A1"],
+          [0.15, "#1565C0"],
+          [0.30, "#1E88E5"],
+          [0.45, "#42A5F5"],
+          [0.60, "#64B5F6"],
+          [0.75, "#90CAF9"],
+          [0.90, "#BBDEFB"],
+          [1, "#E3F2FD"],
         ],
+        reversescale: true,
         contours: {
           z: {
             show: true,
