@@ -5,7 +5,6 @@ import { Card, PageHeader } from "@/components/ui/card";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import tickerData from "@/data/cboe-tickers.json";
 
 const API = "http://localhost:3850";
 
@@ -17,8 +16,6 @@ interface Ticker {
   subcat: string;
   explanation: string;
 }
-
-const TICKERS: Ticker[] = tickerData as Ticker[];
 
 /* ── Ticker Chart Component ── */
 function TickerVisual({ symbol, cats }: { symbol: string; cats: string[] }) {
@@ -50,7 +47,7 @@ function TickerVisual({ symbol, cats }: { symbol: string; cats: string[] }) {
     setLoading(true);
     setError("");
 
-    fetch(`${API}/api/uw/iv-rank?ticker=${queryTicker}`)
+    fetch(`${API}/api/uw/iv-rank?ticker=${queryTicker}`, { signal: AbortSignal.timeout(10000) })
       .then(r => r.json())
       .then(res => {
         const arr = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
@@ -188,6 +185,8 @@ const ALL_CATS = ["All", ...Object.keys(CAT_COLORS)] as const;
 const PAGE_SIZE = 60;
 
 export default function CboeTickersPage() {
+  const [tickers, setTickers] = useState<Ticker[]>([]);
+  const [loadingTickers, setLoadingTickers] = useState(true);
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState<string>("All");
   const [activeSubcat, setActiveSubcat] = useState<string | null>(null);
@@ -195,16 +194,23 @@ export default function CboeTickersPage() {
   const [page, setPage] = useState(0);
   const [selectedTicker, setSelectedTicker] = useState<Ticker | null>(null);
 
+  useEffect(() => {
+    fetch("/api/cboe-tickers", { signal: AbortSignal.timeout(10000) })
+      .then(r => r.json())
+      .then((data: Ticker[]) => { setTickers(data); setLoadingTickers(false); })
+      .catch(() => setLoadingTickers(false));
+  }, []);
+
   // Filter
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return TICKERS.filter((t) => {
+    return tickers.filter((t) => {
       const matchesCat = activeCat === "All" || t.cats.includes(activeCat);
       const matchesSubcat = !activeSubcat || t.subcat === activeSubcat;
       const matchesSearch = !q || t.sym.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q);
       return matchesCat && matchesSubcat && matchesSearch;
     });
-  }, [search, activeCat, activeSubcat]);
+  }, [search, activeCat, activeSubcat, tickers]);
 
   // Reset page on filter change
   useMemo(() => setPage(0), [search, activeCat, activeSubcat]);
@@ -214,14 +220,14 @@ export default function CboeTickersPage() {
 
   // Category counts
   const catCounts = useMemo(() => {
-    const m: Record<string, number> = { All: TICKERS.length };
-    for (const t of TICKERS) for (const c of t.cats) m[c] = (m[c] || 0) + 1;
+    const m: Record<string, number> = { All: tickers.length };
+    for (const t of tickers) for (const c of t.cats) m[c] = (m[c] || 0) + 1;
     return m;
-  }, []);
+  }, [tickers]);
 
   // Subcategory counts (for active category)
   const subcatCounts = useMemo(() => {
-    const items = activeCat === "All" ? TICKERS : TICKERS.filter(t => t.cats.includes(activeCat));
+    const items = activeCat === "All" ? tickers : tickers.filter(t => t.cats.includes(activeCat));
     const q = search.toLowerCase().trim();
     const filtered2 = q ? items.filter(t => t.sym.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q)) : items;
     const m: Record<string, number> = {};
@@ -229,13 +235,19 @@ export default function CboeTickersPage() {
       m[t.subcat] = (m[t.subcat] || 0) + 1;
     }
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
-  }, [activeCat, search]);
+  }, [activeCat, search, tickers]);
 
   // Related tickers for detail panel
   const relatedTickers = useMemo(() => {
     if (!selectedTicker) return [];
-    return TICKERS.filter(t => t.subcat === selectedTicker.subcat && t.sym !== selectedTicker.sym).slice(0, 12);
-  }, [selectedTicker]);
+    return tickers.filter(t => t.subcat === selectedTicker.subcat && t.sym !== selectedTicker.sym).slice(0, 12);
+  }, [selectedTicker, tickers]);
+
+  if (loadingTickers) return (
+    <div className="p-6 max-w-[1600px] mx-auto text-center py-20 text-[#6B6B75]">
+      Chargement des tickers CBOE...
+    </div>
+  );
 
   function makeTag(cat: string) {
     const color = CAT_COLORS[cat] || "#6B6B75";
@@ -251,7 +263,7 @@ export default function CboeTickersPage() {
     <div className="p-6 max-w-[1600px] mx-auto">
       <PageHeader
         title="Reference Tickers CBOE"
-        subtitle={`${TICKERS.length} indices CBOE Global — recherche, categorisation et explications`}
+        subtitle={`${tickers.length} indices CBOE Global — recherche, categorisation et explications`}
       />
 
       {/* Search + View Toggle */}
@@ -298,7 +310,7 @@ export default function CboeTickersPage() {
                 !activeSubcat ? "bg-[#FF6B0020] text-[#FF6B00]" : "text-[#6B6B75] hover:bg-[#16161A]"
               }`}>
               <span>Tous</span>
-              <span className="text-[10px] opacity-60">{filtered.length + (activeSubcat ? TICKERS.filter(t => activeCat === "All" || t.cats.includes(activeCat)).length - filtered.length : 0)}</span>
+              <span className="text-[10px] opacity-60">{filtered.length + (activeSubcat ? tickers.filter(t => activeCat === "All" || t.cats.includes(activeCat)).length - filtered.length : 0)}</span>
             </button>
             {subcatCounts.map(([name, count]) => (
               <button key={name} onClick={() => setActiveSubcat(name)}

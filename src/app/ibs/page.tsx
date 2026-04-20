@@ -130,7 +130,7 @@ export default function IbsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/sierra/ibs`);
+      const res = await fetch(`${API}/sierra/ibs`, { signal: AbortSignal.timeout(10000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: IbsData = await res.json();
       setData(json);

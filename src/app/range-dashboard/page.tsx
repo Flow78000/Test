@@ -98,7 +98,7 @@ export default function RangeDashboardPage() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const r = await fetch(`${API}/api/sierra/range-matrix?days=${days}&baseline_window=${baseline}`);
+      const r = await fetch(`${API}/api/sierra/range-matrix?days=${days}&baseline_window=${baseline}`, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json: MatrixResponse = await r.json();
       setData(json);

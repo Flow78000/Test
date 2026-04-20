@@ -17,7 +17,7 @@ def _load_cache():
         try:
             with open(CACHE_FILE, "r") as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
     return {"tickers": {}, "last_updated": None}
 
@@ -26,7 +26,7 @@ def _save_cache(data):
     try:
         with open(CACHE_FILE, "w") as f:
             json.dump(data, f)
-    except:
+    except Exception:
         pass
 
 
@@ -76,7 +76,7 @@ def fetch_dividends_batch(ib_unused, tickers):
             if ex_date_ts and isinstance(ex_date_ts, (int, float)):
                 try:
                     ex_date = datetime.fromtimestamp(ex_date_ts).strftime("%Y-%m-%d")
-                except:
+                except Exception:
                     pass
 
             price = info.get("currentPrice") or info.get("regularMarketPrice")

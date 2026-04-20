@@ -124,8 +124,8 @@ export default function NewsPage() {
     setError("");
     try {
       const [eRes, aRes] = await Promise.all([
-        fetch(`${API}/api/uw/economic-calendar`).then(r => r.json()),
-        fetch(`${API}/api/news/archive?limit=500`).then(r => r.json()),
+        fetch(`${API}/api/uw/economic-calendar`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
+        fetch(`${API}/api/news/archive?limit=500`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
       ]);
       setEvents(Array.isArray(eRes) ? eRes : eRes?.data ?? []);
       const items = Array.isArray(aRes?.items) ? aRes.items : [];
@@ -146,7 +146,7 @@ export default function NewsPage() {
 
   const triggerRefresh = useCallback(async () => {
     try {
-      await fetch(`${API}/api/news/refresh`, { method: "POST" });
+      await fetch(`${API}/api/news/refresh`, { method: "POST", signal: AbortSignal.timeout(10000) });
       await load();
     } catch {
       /* ignore */

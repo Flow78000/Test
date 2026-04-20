@@ -31,7 +31,7 @@ export default function TermStructurePage() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const res = await fetch(`${API}/api/uw/iv-rank?ticker=SPY`).then(r => r.json());
+      const res = await fetch(`${API}/api/uw/iv-rank?ticker=SPY`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       setData(res?.data ?? res ?? {});
     } catch (e: any) { setError(e.message || "Serveur indisponible"); }
     setLoading(false);

@@ -44,7 +44,7 @@ function VolDeskLiveTab() {
 
   const loadTwsStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/market/tws/status`).then(r => r.json());
+      const res = await fetch(`${API}/api/market/tws/status`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       setTwsStatus(res);
     } catch { setTwsStatus({ connected: false, qualified_count: 0 }); }
   }, []);
@@ -53,15 +53,15 @@ function VolDeskLiveTab() {
     setReconnecting(true);
     setCollectMsg("Reconnexion TWS en cours...");
     try {
-      const res = await fetch(`${API}/api/market/tws/reconnect`, { method: "POST" }).then(r => r.json());
+      const res = await fetch(`${API}/api/market/tws/reconnect`, { method: "POST", signal: AbortSignal.timeout(10000) }).then(r => r.json());
       if (res.connected) {
         setCollectMsg(`TWS reconnecte — ${res.qualified_count} contrats qualifies`);
         await loadTwsStatus();
         // Auto-collecte apres reconnexion reussie
         try {
-          const c = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+          const c = await fetch(`${API}/api/market/vol-desk/collect`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
           if (!c.error) {
-            const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+            const fresh = await fetch(`${API}/api/market/vol-desk/latest`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
             if (fresh && !fresh.error) setData(fresh);
           }
         } catch { }
@@ -77,16 +77,16 @@ function VolDeskLiveTab() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+      const res = await fetch(`${API}/api/market/vol-desk/latest`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       if (res && !res.error) {
         setData(res);
       } else {
         // No cached data — try auto-collect
         setCollectMsg("Premiere collecte automatique...");
         try {
-          const collectRes = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+          const collectRes = await fetch(`${API}/api/market/vol-desk/collect`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
           if (collectRes && !collectRes.error) {
-            const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+            const fresh = await fetch(`${API}/api/market/vol-desk/latest`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
             if (fresh && !fresh.error) setData(fresh);
             setCollectMsg(`Collecte reussie: ${collectRes.tickers_collected} tickers`);
           } else {
@@ -106,9 +106,9 @@ function VolDeskLiveTab() {
   }, [load, loadTwsStatus]);
   const autoRefresh = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+      const res = await fetch(`${API}/api/market/vol-desk/collect`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       if (res && !res.error) {
-        const fresh = await fetch(`${API}/api/market/vol-desk/latest`).then(r => r.json());
+        const fresh = await fetch(`${API}/api/market/vol-desk/latest`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
         if (fresh && !fresh.error) setData(fresh);
       }
     } catch { }
@@ -120,7 +120,7 @@ function VolDeskLiveTab() {
     setCollecting(true);
     setCollectMsg("");
     try {
-      const res = await fetch(`${API}/api/market/vol-desk/collect`).then(r => r.json());
+      const res = await fetch(`${API}/api/market/vol-desk/collect`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       if (!res.error) {
         await load();
         setCollectMsg(`Collecte reussie: ${res.tickers_collected} tickers`);
@@ -345,7 +345,7 @@ function HistoryTab() {
 
   const loadSectors = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/market/vol-desk/sectors?days=90`).then(r => r.json());
+      const res = await fetch(`${API}/api/market/vol-desk/sectors?days=90`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       setSectors(res);
     } catch { }
     setLoading(false);
@@ -353,7 +353,7 @@ function HistoryTab() {
 
   const loadTicker = useCallback(async (sym: string) => {
     try {
-      const res = await fetch(`${API}/api/market/vol-desk/ticker?symbol=${sym}&days=90`).then(r => r.json());
+      const res = await fetch(`${API}/api/market/vol-desk/ticker?symbol=${sym}&days=90`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       setTickerHistory(res);
     } catch { }
   }, []);

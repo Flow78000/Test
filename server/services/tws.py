@@ -113,6 +113,10 @@ def get_cached(key, ttl=CACHE_TTL):
 
 
 def set_cache(key, data):
+    if len(data_cache) > 500:
+        sorted_keys = sorted(data_cache, key=lambda k: data_cache[k][0])
+        for k in sorted_keys[:100]:
+            del data_cache[k]
     data_cache[key] = (time.time(), data)
 
 
@@ -212,14 +216,14 @@ def ensure_connected():
         if ib:
             try:
                 ib.disconnect()
-            except:
+            except Exception:
                 pass
         ok = connect_tws()
         if ok:
             qualify_all()
             print("  [TWS] Reconnexion automatique reussie")
         return ok
-    except:
+    except Exception:
         ib_connected = False
         return False
 
@@ -245,7 +249,7 @@ def fetch_quotes(names_subset=None):
         _run_ib_coro(_fetch(), timeout=10)
     except Exception:
         # Fallback: simple wait
-        time.sleep(3)
+        time.sleep(0.5)
 
     results = {}
     for name, contract in targets.items():

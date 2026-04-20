@@ -125,12 +125,12 @@ def _parse_bar(cols, range_cols):
                 try:
                     val = float(cols[idx].strip())
                     bar["levels"][name] = val
-                except:
+                except Exception:
                     bar["levels"][name] = 0
             else:
                 bar["levels"][name] = 0
         return bar
-    except:
+    except Exception:
         return None
 
 
@@ -447,7 +447,7 @@ def persist_signals(signals):
         try:
             with open(STORE_FILE, "r") as f:
                 store = json.load(f)
-        except:
+        except Exception:
             pass
 
     existing_keys = set()

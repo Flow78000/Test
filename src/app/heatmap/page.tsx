@@ -303,7 +303,7 @@ export default function HeatmapPage() {
   const fetchData = useCallback(async () => {
     setError(false);
     try {
-      const resp = await fetch(`${API}/api/uw/sector-etfs`);
+      const resp = await fetch(`${API}/api/uw/sector-etfs`, { signal: AbortSignal.timeout(10000) });
       if (!resp.ok) throw new Error("sectors");
       const json = await resp.json();
       const raw: SectorETF[] = (json?.data || json || []).map((s: any) => ({
@@ -380,7 +380,7 @@ export default function HeatmapPage() {
     async function fetchRotation() {
       setLoadingRot(true);
       try {
-        const res = await fetch(`${API}/api/uw/sector-rotation?days=${rotDays}`).then(r => r.json());
+        const res = await fetch(`${API}/api/uw/sector-rotation?days=${rotDays}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
         if (res && !res.error) setRotationData(res);
       } catch { }
       setLoadingRot(false);

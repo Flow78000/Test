@@ -111,7 +111,7 @@ export default function FloQPage() {
       url.searchParams.set("date", date);
       if (ticker) url.searchParams.set("ticker", ticker);
       if (force) url.searchParams.set("force", "true");
-      const r = await fetch(url.toString());
+      const r = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json = await r.json();
       setData(json);

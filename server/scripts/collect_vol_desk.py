@@ -46,7 +46,7 @@ def run_collection():
     finally:
         try:
             ib.disconnect()
-        except:
+        except Exception:
             pass
 
 

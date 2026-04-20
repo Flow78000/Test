@@ -222,7 +222,7 @@ export default function CentralBanksPage() {
     async function fetchCalendar() {
       setLoadingCal(true);
       try {
-        const resp = await fetch(`${API}/api/uw/economic-calendar`);
+        const resp = await fetch(`${API}/api/uw/economic-calendar`, { signal: AbortSignal.timeout(10000) });
         const json = await resp.json();
         const events = json?.data || json || [];
         // UW eco calendar fields: { event, time, type, prev, forecast, reported_period }

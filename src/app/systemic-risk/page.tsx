@@ -72,7 +72,7 @@ export default function SystemicRiskPage() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const r = await fetch(`${API}/api/market/systemic-risk`);
+      const r = await fetch(`${API}/api/market/systemic-risk`, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json = await r.json();
       setData(json);

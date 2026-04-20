@@ -117,7 +117,7 @@ export default function DarkPoolAlertsPage() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const r = await fetch(`${API}/api/uw/darkpool-alerts`);
+      const r = await fetch(`${API}/api/uw/darkpool-alerts`, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json = await r.json();
       setData(json);

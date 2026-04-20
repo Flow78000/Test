@@ -37,17 +37,19 @@ async def lifespan(app: FastAPI):
     # Auto-collect vol desk snapshot if TWS is connected
     from services.tws import ib_connected, ib
     if ib_connected:
-        try:
-            from services.vol_desk_collector import collect_vol_desk_snapshot, save_snapshot
-            print("  [FLO.W] Auto-collecte Vol Desk...")
-            snapshot = collect_vol_desk_snapshot(ib)
-            if "error" not in snapshot:
-                days = save_snapshot(snapshot)
-                print(f"  [FLO.W] Vol Desk: {snapshot['count']} tickers, {days} jours en historique")
-            else:
-                print(f"  [FLO.W] Vol Desk skip: {snapshot.get('error')}")
-        except Exception as e:
-            print(f"  [FLO.W] Vol Desk auto-collect error: {e}")
+        async def _bg_vol_desk():
+            try:
+                from services.vol_desk_collector import collect_vol_desk_snapshot, save_snapshot
+                print("  [FLO.W] Auto-collecte Vol Desk...")
+                snapshot = await asyncio.to_thread(collect_vol_desk_snapshot, ib)
+                if "error" not in snapshot:
+                    days = await asyncio.to_thread(save_snapshot, snapshot)
+                    print(f"  [FLO.W] Vol Desk: {snapshot['count']} tickers, {days} jours en historique")
+                else:
+                    print(f"  [FLO.W] Vol Desk skip: {snapshot.get('error')}")
+            except Exception as e:
+                print(f"  [FLO.W] Vol Desk auto-collect error: {e}")
+        asyncio.create_task(_bg_vol_desk())
     yield
     # Shutdown
     try:
@@ -112,54 +114,19 @@ def health():
     from services import tws as tws_mod
     import os
     import time
-    import urllib.request
 
-    # Unusual Whales — reachability via curl subprocess (same code path as proxy_uw).
-    # UW returns HTTP 200 with an error envelope when the daily limit is hit,
-    # so we must inspect the body, not just the status code.
     uw_ok = False
     uw_detail = "not checked"
     try:
-        import subprocess
-        import json as _json
-        token = os.environ.get("UW_API_TOKEN", "da6adf76-f312-4572-acff-e7f99d63c650")
-        proc = subprocess.run(
-            [
-                "curl", "-s", "-w", "\n%{http_code}",
-                "https://api.unusualwhales.com/api/stock/SPY/iv-rank",
-                "-H", f"Authorization: Bearer {token}",
-                "-H", "Accept: application/json",
-                "--max-time", "3",
-            ],
-            capture_output=True, text=True, timeout=5,
-        )
-        out = proc.stdout or ""
-        nl = out.rfind("\n")
-        body = out[:nl] if nl >= 0 else ""
-        code = (out[nl + 1:] if nl >= 0 else out).strip()
-
-        if code == "200":
-            # inspect body: error envelope means daily limit / rate limit
-            try:
-                parsed = _json.loads(body)
-            except Exception:
-                parsed = None
-            if isinstance(parsed, dict) and "code" in parsed and "data" not in parsed:
-                err_code = str(parsed.get("code", ""))
-                if "limit" in err_code.lower():
-                    uw_ok = False
-                    uw_detail = f"daily limit hit ({err_code})"
-                else:
-                    uw_ok = False
-                    uw_detail = f"error {err_code}"
-            else:
-                uw_ok = True
-                uw_detail = "HTTP 200"
-        elif code == "429":
-            uw_ok = True  # reachable but rate limited — still "up"
-            uw_detail = "HTTP 429 rate limited"
+        from services.uw_client import uw_get
+        result = uw_get("/stock/SPY/iv-rank")
+        if isinstance(result, dict) and "data" in result:
+            uw_ok = True
+            uw_detail = "OK"
+        elif isinstance(result, dict) and "code" in result:
+            uw_detail = f"error: {result.get('code', 'unknown')}"
         else:
-            uw_detail = f"HTTP {code}" if code else "no response"
+            uw_detail = "unexpected response"
     except Exception as e:
         uw_detail = type(e).__name__
 

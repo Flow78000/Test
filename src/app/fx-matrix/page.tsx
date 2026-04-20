@@ -42,7 +42,7 @@ export default function FxMatrixPage() {
 
   const fetchLive = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/uw/market-tide`).then(r => r.json());
+      const res = await fetch(`${API}/api/uw/market-tide`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       if (res && typeof res === "object" && Object.keys(res).length > 0) {
         // If API returns FX data, use it; otherwise keep demo
         const fxData = res?.fx_matrix || res?.data?.fx_matrix;

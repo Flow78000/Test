@@ -130,8 +130,8 @@ export default function VolMapPage() {
         setError(null);
 
         const [ivRes, strikeRes] = await Promise.allSettled([
-          fetch(`${API}/api/uw/iv-rank?ticker=SPY`).then(r => r.json()),
-          fetch(`${API}/api/uw/greek-exposure/strike?ticker=SPX`).then(r => r.json()),
+          fetch(`${API}/api/uw/iv-rank?ticker=SPY`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
+          fetch(`${API}/api/uw/greek-exposure/strike?ticker=SPX`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
         ]);
 
         if (ivRes.status === "fulfilled" && Array.isArray(ivRes.value)) {

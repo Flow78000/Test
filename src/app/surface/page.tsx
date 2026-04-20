@@ -130,11 +130,11 @@ export default function SurfacePage() {
     try {
       // Fetch all data in parallel
       const [surfR, interpR, termR, statsR, skewR] = await Promise.allSettled([
-        fetch(`${API}/api/uw/vol-surface?ticker=${ticker}`, { cache: "no-store" }),
-        fetch(`${API}/api/uw/interpolated-iv?ticker=${ticker}`, { cache: "no-store" }),
-        fetch(`${API}/api/uw/vol-term-structure?ticker=${ticker}`, { cache: "no-store" }),
-        fetch(`${API}/api/uw/vol-stats?ticker=${ticker}`, { cache: "no-store" }),
-        fetch(`${API}/api/uw/risk-reversal-skew?ticker=${ticker}`, { cache: "no-store" }),
+        fetch(`${API}/api/uw/vol-surface?ticker=${ticker}`, { cache: "no-store", signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/interpolated-iv?ticker=${ticker}`, { cache: "no-store", signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/vol-term-structure?ticker=${ticker}`, { cache: "no-store", signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/vol-stats?ticker=${ticker}`, { cache: "no-store", signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/risk-reversal-skew?ticker=${ticker}`, { cache: "no-store", signal: AbortSignal.timeout(10000) }),
       ]);
 
       // Surface (main)

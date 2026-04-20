@@ -33,7 +33,7 @@ export default function OptionLabPage() {
   const fetchSpot = useCallback(async (sym: string) => {
     try {
       const queryTicker = sym === "SPX" ? "SPY" : sym;
-      const ivRes = await fetch(`${API}/api/uw/iv-rank?ticker=${queryTicker}`).then(r => r.json());
+      const ivRes = await fetch(`${API}/api/uw/iv-rank?ticker=${queryTicker}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       const arr = Array.isArray(ivRes?.data) ? ivRes.data : Array.isArray(ivRes) ? ivRes : [];
       const last = arr[arr.length - 1];
       if (last?.close) {

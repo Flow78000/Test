@@ -213,11 +213,11 @@ export default function EarningsPage() {
       const allPost: Earning[] = [];
 
       const fetches = weekDays.flatMap(date => [
-        fetch(`${API}/api/uw/earnings/premarket?date=${date}`).then(r => r.json()).then(json => {
+        fetch(`${API}/api/uw/earnings/premarket?date=${date}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()).then(json => {
           const items = Array.isArray(json) ? json : json?.data ?? [];
           items.forEach((e: any) => allPre.push(mapEarning(e)));
         }).catch(() => {}),
-        fetch(`${API}/api/uw/earnings/afterhours?date=${date}`).then(r => r.json()).then(json => {
+        fetch(`${API}/api/uw/earnings/afterhours?date=${date}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()).then(json => {
           const items = Array.isArray(json) ? json : json?.data ?? [];
           items.forEach((e: any) => allPost.push(mapEarning(e)));
         }).catch(() => {}),
@@ -229,7 +229,7 @@ export default function EarningsPage() {
       const allTickers = [...new Set([...allPre, ...allPost].map(e => e.ticker).filter(Boolean))];
       if (allTickers.length > 0) {
         try {
-          const divRes = await fetch(`${API}/api/market/dividends?tickers=${allTickers.join(",")}`).then(r => r.json());
+          const divRes = await fetch(`${API}/api/market/dividends?tickers=${allTickers.join(",")}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
           if (divRes && typeof divRes === "object") {
             const enrichWithDiv = (earning: Earning): Earning => {
               const div = divRes[earning.ticker];

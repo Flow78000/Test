@@ -54,7 +54,7 @@ def extract():
                 price = float(cols[last_idx])
                 high = float(cols[high_idx])
                 low = float(cols[low_idx])
-            except:
+            except Exception:
                 continue
 
             if date not in bars_per_day:
@@ -71,7 +71,7 @@ def extract():
                 if idx >= len(cols): continue
                 try:
                     level_val = float(cols[idx])
-                except: continue
+                except Exception: continue
                 if level_val == 0: continue
 
                 is_upper = not lvl.startswith("-") and lvl not in ("L2","L3")
@@ -89,7 +89,7 @@ def extract():
                         sig_val = float(cols[si])
                         if sig_val > 0.3:
                             day["sigma_spikes"].append({"val": round(sig_val,4), "time": time_str, "price": round(price,2)})
-                    except: pass
+                    except Exception: pass
 
         # Build summary
         daily = []

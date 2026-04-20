@@ -18,7 +18,7 @@ def _load_store():
         try:
             with open(STORE_FILE, "r") as f:
                 return json.load(f)
-        except:
+        except Exception:
             pass
     return {"signals": {}, "stats": {"total_collected": 0, "last_collection": None}}
 
@@ -103,7 +103,7 @@ def get_stored_signals(symbol=None, days=None, min_strength=0):
                     dt = datetime.fromisoformat(collected.replace("Z", "+00:00"))
                     if dt.timestamp() >= cutoff:
                         filtered.append(s)
-                except:
+                except Exception:
                     filtered.append(s)  # En cas de doute, garder
             else:
                 filtered.append(s)

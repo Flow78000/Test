@@ -92,6 +92,7 @@ function VanillaTab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ spot, strike, t, r, q, sigma, option_type: optionType }),
+        signal: AbortSignal.timeout(10000),
       });
       setResult(await r2.json());
     } finally {
@@ -155,6 +156,7 @@ function DigitalTab() {
     const r2 = await fetch(`${API}/api/pricing/digital`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ spot, strike, t, r, q, sigma, cash, option_type: optionType }),
+      signal: AbortSignal.timeout(10000),
     });
     setResult(await r2.json());
   };
@@ -206,6 +208,7 @@ function BarrierTab() {
     const r2 = await fetch(`${API}/api/pricing/barrier`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ spot, strike, barrier, t, r, q, sigma, option_type: optionType, barrier_type: barrierType, rebate }),
+      signal: AbortSignal.timeout(10000),
     });
     setResult(await r2.json());
   };
@@ -264,6 +267,7 @@ function SwapTab() {
     const r2 = await fetch(`${API}/api/pricing/swap`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notional, fixed_rate: fixedRate, float_rate: floatRate, tenor_years: tenorYears, freq, pay_fixed: payFixed }),
+      signal: AbortSignal.timeout(10000),
     });
     setResult(await r2.json());
   };
@@ -342,6 +346,7 @@ function FxTab() {
     const r2 = await fetch(`${API}/api/pricing/fx-forward`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ spot, rate_base: rateBase, rate_quote: rateQuote, tenor_days: tenorDays, notional }),
+      signal: AbortSignal.timeout(10000),
     });
     setResult(await r2.json());
   };
@@ -396,6 +401,7 @@ function AutocallTab() {
     try {
       const r2 = await fetch(`${API}/api/pricing/autocall`, {
         method: "POST", headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           spot, coupon, barrier_protection: barrierProtection, autocall_trigger: autocallTrigger,
           observations, notional, r, q, sigma, tenor_years: tenorYears, n_paths: nPaths,

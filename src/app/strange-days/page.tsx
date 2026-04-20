@@ -193,7 +193,7 @@ export default function StrangeDaysPage() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const r = await fetch(`${API}/api/strange-days/`);
+      const r = await fetch(`${API}/api/strange-days/`, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json = await r.json();
       setData(json);

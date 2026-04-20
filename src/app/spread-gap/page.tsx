@@ -85,7 +85,7 @@ export default function SpreadGapTrackerPage() {
     try {
       setError(null);
       const url = `${API}/api/spread-gap/live${force ? "?force=true" : ""}`;
-      const r = await fetch(url);
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j: LiveResponse = await r.json();
       setLive(j);
@@ -100,7 +100,7 @@ export default function SpreadGapTrackerPage() {
   const forceRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetch(`${API}/api/spread-gap/auto-levels/refresh`, { method: "POST" });
+      await fetch(`${API}/api/spread-gap/auto-levels/refresh`, { method: "POST", signal: AbortSignal.timeout(10000) });
       await load(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Refresh failed");

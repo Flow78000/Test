@@ -27,11 +27,11 @@ export default function SignalsPage() {
   async function loadSignals() {
     try {
       const [dash, perf, alerts, sigma, hundred] = await Promise.all([
-        fetch("http://localhost:3850/api/sierra/dashboard").then(r => r.json()),
-        fetch("http://localhost:3850/api/sierra/performance-all").then(r => r.json()),
-        fetch("http://localhost:3850/api/sierra/live-alerts").then(r => r.json()).catch(() => null),
-        fetch("http://localhost:3850/api/sierra/sigma-signals").then(r => r.json()).catch(() => null),
-        fetch("http://localhost:3850/api/sierra/hundred-pct-signals").then(r => r.json()).catch(() => null),
+        fetch("http://localhost:3850/api/sierra/dashboard", { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
+        fetch("http://localhost:3850/api/sierra/performance-all", { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
+        fetch("http://localhost:3850/api/sierra/live-alerts", { signal: AbortSignal.timeout(10000) }).then(r => r.json()).catch(() => null),
+        fetch("http://localhost:3850/api/sierra/sigma-signals", { signal: AbortSignal.timeout(10000) }).then(r => r.json()).catch(() => null),
+        fetch("http://localhost:3850/api/sierra/hundred-pct-signals", { signal: AbortSignal.timeout(10000) }).then(r => r.json()).catch(() => null),
       ]);
       setData(dash);
       setPerfData(perf);
@@ -44,7 +44,7 @@ export default function SignalsPage() {
 
   async function loadVix() {
     try {
-      const res = await fetch("http://localhost:3850/api/uw/iv-rank?ticker=SPY").then(r => r.json());
+      const res = await fetch("http://localhost:3850/api/uw/iv-rank?ticker=SPY", { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       setVixData(res);
     } catch { /* silently fail */ }
   }

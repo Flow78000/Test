@@ -272,7 +272,7 @@ def collect_vol_desk_snapshot(ib):
     for sym, ticker in tickers_map.items():
         try:
             ib.cancelMktData(contracts[sym])
-        except:
+        except Exception:
             pass
 
     return {

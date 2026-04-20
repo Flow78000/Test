@@ -73,7 +73,7 @@ export default function StraddlePage() {
   const fetchData = useCallback(async () => {
     setError("");
     try {
-      const res = await fetch(`${API_BASE}/api/uw/straddle?ticker=${ticker}`);
+      const res = await fetch(`${API_BASE}/api/uw/straddle?ticker=${ticker}`, { signal: AbortSignal.timeout(10000) });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const json = await res.json();
 

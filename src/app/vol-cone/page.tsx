@@ -87,7 +87,7 @@ export default function VolConePage() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const res = await fetch(`${API}/api/uw/volatility/realized?ticker=${ticker}`).then(r => r.json());
+      const res = await fetch(`${API}/api/uw/volatility/realized?ticker=${ticker}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       setRaw(Array.isArray(res) ? res : res?.data ?? []);
     } catch (e: any) { setError(e.message || "Serveur indisponible"); }
     setLoading(false);

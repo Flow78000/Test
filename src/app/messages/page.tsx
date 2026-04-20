@@ -80,7 +80,7 @@ export default function MessagesPage() {
       if (channel) params.append("channel", channel);
       if (search) params.append("search", search);
       if (pin) params.append("pin", pin);
-      const r = await fetch(`${API}/api/messages?${params.toString()}`);
+      const r = await fetch(`${API}/api/messages?${params.toString()}`, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json = await r.json();
       setData(json);
@@ -116,6 +116,7 @@ export default function MessagesPage() {
           encrypt,
           pin: encrypt ? pin : undefined,
         }),
+        signal: AbortSignal.timeout(10000),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setTitle("");
@@ -137,6 +138,7 @@ export default function MessagesPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pinned: !m.pinned }),
+        signal: AbortSignal.timeout(10000),
       });
       await load();
     },
@@ -149,6 +151,7 @@ export default function MessagesPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ important: !m.important }),
+        signal: AbortSignal.timeout(10000),
       });
       await load();
     },
@@ -158,7 +161,7 @@ export default function MessagesPage() {
   const deleteMessage = useCallback(
     async (m: Message) => {
       if (!confirm(`Supprimer "${m.title || "(sans titre)"}" ?`)) return;
-      await fetch(`${API}/api/messages/${m.id}`, { method: "DELETE" });
+      await fetch(`${API}/api/messages/${m.id}`, { method: "DELETE", signal: AbortSignal.timeout(10000) });
       await load();
     },
     [load],

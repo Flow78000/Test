@@ -257,7 +257,7 @@ def discord_stream(bars: int = 500):
                         "spy_put_buysell": float(cols[21]) if cols[21] else 0,
                     }
                     data.append(row)
-                except:
+                except Exception:
                     continue
             result["notional_delta"] = {
                 "data": data,
@@ -286,7 +286,7 @@ def discord_stream(bars: int = 500):
                         v = float(last[i])
                         if v != 0:
                             levels[h] = v
-                    except:
+                    except Exception:
                         pass
             result["gex_zones"] = {
                 "levels": levels,

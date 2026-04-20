@@ -81,11 +81,11 @@ export default function VolDeskPage() {
       // Try vol-regime first, fallback to iv-rank
       let res: any;
       try {
-        const r = await fetch(`${API}/api/market/vol-regime`);
+        const r = await fetch(`${API}/api/market/vol-regime`, { signal: AbortSignal.timeout(10000) });
         if (!r.ok) throw new Error();
         res = await r.json();
       } catch {
-        const r2 = await fetch(`${API}/api/uw/iv-rank?ticker=SPY`);
+        const r2 = await fetch(`${API}/api/uw/iv-rank?ticker=SPY`, { signal: AbortSignal.timeout(10000) });
         if (!r2.ok) throw new Error("Serveur indisponible");
         res = await r2.json();
       }

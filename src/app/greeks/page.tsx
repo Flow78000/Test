@@ -136,8 +136,8 @@ function TotalGexTab() {
   const load = useCallback(async () => {
     try {
       const [analysis, live] = await Promise.all([
-        fetch(`${API}/api/sierra/gex-analysis?bars=8000`).then(r => r.json()),
-        fetch(`${API}/api/sierra/signals?symbol=SP500GEX`).then(r => r.json()),
+        fetch(`${API}/api/sierra/gex-analysis?bars=8000`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
+        fetch(`${API}/api/sierra/signals?symbol=SP500GEX`, { signal: AbortSignal.timeout(10000) }).then(r => r.json()),
       ]);
       setGexData(analysis);
       setSierraLive(live);
@@ -377,7 +377,7 @@ function GreeksByStrikeTab() {
     setLoading(true);
     setError("");
     try {
-      const gRes = await fetch(`${API}/api/uw/greek-exposure/strike?ticker=${ticker}`).then(r => r.json());
+      const gRes = await fetch(`${API}/api/uw/greek-exposure/strike?ticker=${ticker}`, { signal: AbortSignal.timeout(10000) }).then(r => r.json());
       const rows = Array.isArray(gRes) ? gRes : gRes?.data ?? [];
       if (rows.length) {
         const strikes = rows.map((r: any) => r.strike).filter(Boolean).sort((a: number, b: number) => a - b);

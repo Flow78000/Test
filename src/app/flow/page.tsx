@@ -90,8 +90,8 @@ export default function FlowPage() {
     setError(false);
     try {
       const [alertResp, tideResp] = await Promise.all([
-        fetch(`${API}/api/uw/flow-alerts`),
-        fetch(`${API}/api/uw/market-tide`),
+        fetch(`${API}/api/uw/flow-alerts`, { signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/market-tide`, { signal: AbortSignal.timeout(10000) }),
       ]);
 
       if (!alertResp.ok) throw new Error("flow");

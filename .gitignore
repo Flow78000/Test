@@ -64,10 +64,16 @@ server/signal_history.json
 server/scripts/menthorq_response.html
 
 # Working/temp files at repo root
-backend.log
+*.log
 na.json
 rm.json
 r1.json
+dp.json
+eh.json
+h.json
+iv.json
+vs.json
+server/uw_usage.json
 
 # IDE
 .vscode/

@@ -29,7 +29,7 @@ export default function RegimePage() {
 
   async function loadRegime() {
     try {
-      const resp = await fetch("http://localhost:3850/api/regime/full");
+      const resp = await fetch("http://localhost:3850/api/regime/full", { signal: AbortSignal.timeout(10000) });
       const json = await resp.json();
       setData(json);
     } catch (e) { console.error(e); }

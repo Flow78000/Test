@@ -920,7 +920,7 @@ def sierra_dashboard():
             mt = os.path.getmtime(info["path"])
             if mt > newest_mtime:
                 newest_mtime = mt
-        except:
+        except Exception:
             pass
     data_age = round(time.time() - newest_mtime) if newest_mtime else None
 

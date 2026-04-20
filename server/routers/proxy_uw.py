@@ -314,7 +314,7 @@ def straddle_data(ticker: str = "SPX"):
             if dte < 0:
                 continue
             exp_with_dte.append((dte, exp_date.isoformat(), contracts))
-        except:
+        except Exception:
             continue
 
     exp_with_dte.sort(key=lambda x: x[0])

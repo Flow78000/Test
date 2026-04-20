@@ -359,7 +359,7 @@ export default function SmartMoneyPage() {
 
   async function load() {
     try {
-      const r = await fetch(`${API}/api/alpha-hunter/`, { cache: "no-store" });
+      const r = await fetch(`${API}/api/alpha-hunter/`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j = await r.json();
       setData(j);

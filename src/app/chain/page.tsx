@@ -211,10 +211,10 @@ export default function ChainPage() {
     try {
       const spotTicker = ticker === "SPX" ? "SPY" : ticker;
       const [chainResp, greekResp, spotResp, priceResp] = await Promise.all([
-        fetch(`${API}/api/uw/option-contracts?ticker=${ticker}&expiration=${expiry}`),
-        fetch(`${API}/api/uw/greek-exposure/strike?ticker=${ticker}`),
-        fetch(`${API}/api/uw/spot-exposures/strike?ticker=${spotTicker}`),
-        fetch(`${API}/api/uw/spot-price?ticker=${ticker}`),
+        fetch(`${API}/api/uw/option-contracts?ticker=${ticker}&expiration=${expiry}`, { signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/greek-exposure/strike?ticker=${ticker}`, { signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/spot-exposures/strike?ticker=${spotTicker}`, { signal: AbortSignal.timeout(10000) }),
+        fetch(`${API}/api/uw/spot-price?ticker=${ticker}`, { signal: AbortSignal.timeout(10000) }),
       ]);
       // Set real spot price
       if (priceResp.ok) {
